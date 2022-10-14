@@ -40,13 +40,13 @@ class Cellular4GDataset(Dataset):
 class NominalCIFAR10Dataset(Dataset):
     def __init__(self, nominal_class, train=True):
         self.data = torchvision.datasets.CIFAR10(
-            '.\datasets',
+            'datasets',
             train=train,
             download=True,
             transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), FlattenTransform()])
         )
 
-        self.indices = torch.where(torch.asarray(self.data.targets) == nominal_class)[0]
+        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
 
     def __getitem__(self, item):
         return self.data[self.indices[item % len(self.indices)]][0]
@@ -56,15 +56,15 @@ class NominalCIFAR10Dataset(Dataset):
 
 
 class AnomalousCIFAR10Dataset(Dataset):
-    def __init__(self, nominal_class, n_components, train=True):
+    def __init__(self, nominal_class, train=True):
         self.data = torchvision.datasets.CIFAR10(
-            '.\datasets',
+            'datasets',
             train=train,
             download=True,
             transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), FlattenTransform()])
         )
 
-        self.indices = torch.where(torch.asarray(self.data.targets) != nominal_class)[0]
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
 
     def __getitem__(self, item):
         return self.data[self.indices[item % len(self.indices)]][0]
@@ -76,7 +76,7 @@ class AnomalousCIFAR10Dataset(Dataset):
 class NominalCIFAR10PCADataset(Dataset):
     def __init__(self, nominal_class, n_components, train=True):
         self.data = torchvision.datasets.CIFAR10(
-            '.\datasets',
+            'datasets',
             train=train,
             download=True,
             transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), FlattenTransform()])
@@ -84,7 +84,7 @@ class NominalCIFAR10PCADataset(Dataset):
 
         self.data.data = PCA(n_components=n_components).fit_transform(StandardScaler().fit_transform(self.data.data.reshape((self.data.data.shape[0], -1))))
 
-        self.indices = torch.where(torch.asarray(self.data.targets) == nominal_class)[0]
+        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
 
     def __getitem__(self, item):
         return self.data[self.indices[item % len(self.indices)]][0]
@@ -96,13 +96,13 @@ class NominalCIFAR10PCADataset(Dataset):
 class AnomalousCIFAR10PCADataset(Dataset):
     def __init__(self, nominal_class, train=True):
         self.data = torchvision.datasets.CIFAR10(
-            '.\datasets',
+            'datasets',
             train=train,
             download=True,
             transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), FlattenTransform()])
         )
 
-        self.indices = torch.where(torch.asarray(self.data.targets) != nominal_class)[0]
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
 
     def __getitem__(self, item):
         return self.data[self.indices[item % len(self.indices)]][0]
@@ -114,13 +114,13 @@ class AnomalousCIFAR10PCADataset(Dataset):
 class NominalMNISTDataset(Dataset):
     def __init__(self, nominal_class, train=True):
         self.data = torchvision.datasets.MNIST(
-            '.\datasets',
+            'datasets',
             train=train,
             download=True,
             transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), FlattenTransform()])
         )
 
-        self.indices = torch.where(torch.asarray(self.data.targets) == nominal_class)[0]
+        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
 
     def __getitem__(self, item):
         return self.data[self.indices[item % len(self.indices)]][0]
@@ -132,13 +132,13 @@ class NominalMNISTDataset(Dataset):
 class AnomalousMNISTDataset(Dataset):
     def __init__(self, nominal_class, train=True):
         self.data = torchvision.datasets.MNIST(
-            '.\datasets',
+            'datasets',
             train=train,
             download=True,
             transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), FlattenTransform()])
         )
 
-        self.indices = torch.where(torch.asarray(self.data.targets) != nominal_class)[0]
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
 
     def __getitem__(self, item):
         return self.data[self.indices[item % len(self.indices)]][0]
