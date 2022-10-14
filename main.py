@@ -25,15 +25,13 @@ for i in range(10):
 
     test_dataloader_nominal = torch.utils.data.DataLoader(test_data_nominal)
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous)
-    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=8)
+    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=128)
 
     for test_dataloader in [test_dataloader_nominal, test_dataloader_anomalous]:
         soft_tukey_depths = []
 
         def soft_tukey_depth(x, x_, z):
-            matmul = torch.matmul(torch.ones((x_.size(dim=0), 1), device=device), x)
-            return torch.sum(torch.sigmoid(torch.divide(torch.matmul(torch.subtract(x2, matmul), z), torch.norm(z))))
-
+            return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(100), torch.divide(torch.matmul(torch.subtract(x2, torch.matmul(torch.ones((x_.size(dim=0), 1), device=device), x)), z), torch.norm(z)))))
 
         for item, x in enumerate(test_dataloader):
             print(f'Item {item}/{len(test_dataloader)}')
