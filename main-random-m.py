@@ -16,6 +16,16 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 
+def get_random_matrix(m, n):
+    matrix = torch.zeros((m, n))
+    for i in range(m):
+        for j in range(n):
+            matrix[i][j] = torch.normal(mean=torch.tensor(0.0), std=torch.tensor(1.0))
+    return matrix
+
+
+M = get_random_matrix(100, 3072)
+
 for i in range(10):
     train_data = NominalCIFAR10Dataset(nominal_class=0, train=True)
     test_data_nominal = NominalCIFAR10Dataset(nominal_class=i, train=False)
@@ -36,12 +46,15 @@ for i in range(10):
 
         for item, x in enumerate(test_dataloader):
             print(f'Item {item}/{len(test_dataloader)}')
+            x = torch.matmul(M, x.t()).t()
+            print(x)
             x = x.to(device)
             z = torch.nn.Parameter(torch.ones(x.size(dim=1), device=device) / torch.tensor(len(train_data)))
             optimizer = torch.optim.SGD([z], lr=1e-5)
 
             for j in range(5):
                 for item2, x2 in enumerate(train_dataloader):
+                    x2 = torch.matmul(M, x2.t()).t()
                     x2 = x2.to(device)
                     _soft_tukey_depth = soft_tukey_depth(x, x2, z)
                     _soft_tukey_depth.backward()
@@ -49,6 +62,7 @@ for i in range(10):
 
             _soft_tukey_depth = torch.tensor(0.0, device=device)
             for step2, x2 in enumerate(train_dataloader):
+                x2 = torch.matmul(M, x2.t()).t()
                 x2 = x2.to(device)
                 _soft_tukey_depth = torch.add(_soft_tukey_depth, soft_tukey_depth(x, x2, z))
 
