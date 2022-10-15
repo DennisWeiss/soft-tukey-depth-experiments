@@ -38,7 +38,7 @@ for i in range(10):
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous)
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=128)
 
-    for test_dataloader in [test_dataloader_nominal, test_dataloader_anomalous]:
+    for test_dataloader in ([test_dataloader_nominal, test_dataloader_anomalous] if i > 0 else [test_dataloader_anomalous]):
         soft_tukey_depths = []
 
         def soft_tukey_depth(x, x_, z):

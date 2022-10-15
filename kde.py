@@ -2,9 +2,10 @@ import scipy as sp
 import numpy as np
 import csv
 import matplotlib
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import sys
 
+matplotlib.use('TkAgg')
 
 data0 = csv.reader(open('soft_tukey_depths_CIFAR10_0.csv'), delimiter=',')
 data1 = csv.reader(open('soft_tukey_depths_CIFAR10_1.csv'), delimiter=',')
@@ -24,17 +25,17 @@ y1 = kde_1(x)
 
 fig0_nominal = plt.figure()
 plt.hist(tukey_depths[0][tukey_depths[0] < 50], bins=100)
-fig0_nominal.show()
+fig0_nominal.savefig(sys.argv[1] + 'hist_nominal.png')
 
 fig0_anomalous = plt.figure()
 plt.hist(tukey_depths[1][tukey_depths[1] < 50], bins=100)
-fig0_anomalous.show()
+fig0_anomalous.savefig(sys.argv[1] + 'hist_anomalous.png')
 
 fig1 = plt.figure()
 plt.plot(x, y0, label='soft tukey depths of 0\'s')
 plt.plot(x, y1, label='soft tukey depths of 1\'s')
 plt.legend()
-fig1.show()
+fig1.savefig(sys.argv[1] + 'kde.png')
 
 
 def get_true_positive_rate(anomalous_tukey_depths, threshold):
@@ -72,6 +73,6 @@ for threshold in np.arange(0, 100, 0.2):
 
 fig2 = plt.figure()
 plt.plot(false_positive_rates, true_positive_rates)
-plt.show()
+fig2.savefig(sys.argv[1] + 'rate_curve.png')
 
 print(compute_auroc(true_positive_rates, false_positive_rates))
