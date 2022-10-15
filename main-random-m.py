@@ -47,7 +47,6 @@ for i in range(10):
         for item, x in enumerate(test_dataloader):
             print(f'Item {item}/{len(test_dataloader)}')
             x = torch.matmul(M, x.t()).t()
-            print(x)
             x = x.to(device)
             z = torch.nn.Parameter(torch.ones(x.size(dim=1), device=device) / torch.tensor(len(train_data)))
             optimizer = torch.optim.SGD([z], lr=1e-5)
