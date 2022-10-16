@@ -1,14 +1,19 @@
 import scipy as sp
+import scipy.stats
 import numpy as np
 import csv
 import matplotlib
 import matplotlib.pyplot as plt
 import sys
 
-matplotlib.use('TkAgg')
 
-data0 = csv.reader(open('soft_tukey_depths_CIFAR10_0.csv'), delimiter=',')
-data1 = csv.reader(open('soft_tukey_depths_CIFAR10_1.csv'), delimiter=',')
+
+CLASS = 0
+
+result_path = f'results/CIFAR10_class{CLASS}_baseline/'
+
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_NominalCIFAR10Dataset_{CLASS}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_AnomalousCIFAR10Dataset_{CLASS}.csv'), delimiter=',')
 
 tukey_depths = []
 
@@ -17,25 +22,34 @@ for data in [data0, data1]:
         if row == 0:
             tukey_depths.append(np.asarray(list(map(float, values))))
 
-kde_0 = sp.stats.gaussian_kde(tukey_depths[0])
-kde_1 = sp.stats.gaussian_kde(tukey_depths[1])
+kde_0 = sp.stats.gaussian_kde(tukey_depths[0], bw_method=0.02)
+kde_1 = sp.stats.gaussian_kde(tukey_depths[1], bw_method=0.02)
 x = np.arange(0, 150, 0.02)
 y0 = kde_0(x)
 y1 = kde_1(x)
 
 fig0_nominal = plt.figure()
-plt.hist(tukey_depths[0][tukey_depths[0] < 50], bins=100)
-fig0_nominal.savefig(sys.argv[1] + 'hist_nominal.png')
+plt.hist(tukey_depths[0][tukey_depths[0] < 50], bins=50)
+plt.xlabel('soft Tukey depth')
+plt.ylabel('count')
+plt.title(f'Histogram of soft Tukey depths of test {CLASS} class w.r.t. train {CLASS} class')
+fig0_nominal.savefig(result_path + 'hist_nominal.png')
 
 fig0_anomalous = plt.figure()
-plt.hist(tukey_depths[1][tukey_depths[1] < 50], bins=100)
-fig0_anomalous.savefig(sys.argv[1] + 'hist_anomalous.png')
+plt.hist(tukey_depths[1][tukey_depths[1] < 50], bins=50, color='orange')
+plt.xlabel('soft Tukey depth')
+plt.ylabel('count')
+plt.title(f'Histogram of soft Tukey depths of test non-{CLASS} classes w.r.t. train {CLASS} class')
+fig0_anomalous.savefig(result_path + 'hist_anomalous.png')
 
 fig1 = plt.figure()
-plt.plot(x, y0, label='soft tukey depths of 0\'s')
-plt.plot(x, y1, label='soft tukey depths of 1\'s')
+plt.plot(x, y0, label='soft Tukey depths of test 0\'s')
+plt.plot(x, y1, label='soft Tukey depths of test non-0\'s')
+plt.title(f'KDE of soft Tukey depths of test {CLASS} class and non-{CLASS} classes w.r.t. train {CLASS} class')
+plt.xlabel('soft Tukey depth')
+plt.ylabel('p')
 plt.legend()
-fig1.savefig(sys.argv[1] + 'kde.png')
+fig1.savefig(result_path + 'kde.png')
 
 
 def get_true_positive_rate(anomalous_tukey_depths, threshold):
@@ -73,6 +87,8 @@ for threshold in np.arange(0, 100, 0.2):
 
 fig2 = plt.figure()
 plt.plot(false_positive_rates, true_positive_rates)
-fig2.savefig(sys.argv[1] + 'rate_curve.png')
+plt.xlabel('false positive rate')
+plt.ylabel('true positive rate')
+fig2.savefig(result_path + 'rate_curve.png')
 
 print(compute_auroc(true_positive_rates, false_positive_rates))

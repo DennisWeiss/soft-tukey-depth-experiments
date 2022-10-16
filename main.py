@@ -16,8 +16,8 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 
-for i in range(10):
-    train_data = NominalCIFAR10Dataset(nominal_class=0, train=True)
+for i in range(1, 10):
+    train_data = NominalCIFAR10Dataset(nominal_class=i, train=True)
     test_data_nominal = NominalCIFAR10Dataset(nominal_class=i, train=False)
     test_data_anomalous = AnomalousCIFAR10Dataset(nominal_class=i, train=False)
 
@@ -59,5 +59,4 @@ for i in range(10):
 
         writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_dataloader.dataset.__class__.__name__}_{i}.csv', 'w'))
         writer.writerow(soft_tukey_depths)
-
 

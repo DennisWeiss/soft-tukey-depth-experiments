@@ -27,7 +27,7 @@ def get_random_matrix(m, n):
 M = get_random_matrix(100, 3072)
 
 for i in range(10):
-    train_data = NominalCIFAR10Dataset(nominal_class=0, train=True)
+    train_data = NominalCIFAR10Dataset(nominal_class=i, train=True)
     test_data_nominal = NominalCIFAR10Dataset(nominal_class=i, train=False)
     test_data_anomalous = AnomalousCIFAR10Dataset(nominal_class=i, train=False)
 
@@ -38,7 +38,7 @@ for i in range(10):
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous)
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=128)
 
-    for test_dataloader in ([test_dataloader_nominal, test_dataloader_anomalous] if i > 0 else [test_dataloader_anomalous]):
+    for test_dataloader in [test_dataloader_nominal, test_dataloader_anomalous]:
         soft_tukey_depths = []
 
         def soft_tukey_depth(x, x_, z):
@@ -72,5 +72,4 @@ for i in range(10):
 
         writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_dataloader.dataset.__class__.__name__}_M_{i}.csv', 'w'))
         writer.writerow(soft_tukey_depths)
-
 
