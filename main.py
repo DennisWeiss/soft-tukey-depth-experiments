@@ -1,7 +1,10 @@
 import torch.utils.data
 import csv
 
-from DataLoader import NominalMNISTDataset, AnomalousMNISTDataset, NominalCIFAR10Dataset, AnomalousCIFAR10Dataset, NominalCIFAR10GrayscaleDataset, AnomalousCIFAR10GrayscaleDataset, Cellular4GDataset, ToyDataset
+from DataLoader import NominalMNISTDataset, AnomalousMNISTDataset, NominalCIFAR10Dataset, AnomalousCIFAR10Dataset, \
+    NominalCIFAR10GrayscaleDataset, AnomalousCIFAR10GrayscaleDataset, Cellular4GDataset, ToyDataset, \
+    NominalCIFAR10ImageDataset, AnomalousCIFAR10ImageDataset
+from models.RAE_CIFAR10 import RAE_CIFAR10
 
 
 USE_CUDA_IF_AVAILABLE = True
@@ -16,10 +19,13 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 
-for i in range(10):
-    train_data = NominalCIFAR10GrayscaleDataset(nominal_class=i, train=True)
-    test_data_nominal = NominalCIFAR10GrayscaleDataset(nominal_class=i, train=False)
-    test_data_anomalous = AnomalousCIFAR10GrayscaleDataset(nominal_class=i, train=False)
+autoencoder = RAE_CIFAR10().to(device)
+autoencoder.load_state_dict(torch.load('./snapshots/RAE_CIFAR10_0'))
+
+for i in range(1):
+    train_data = NominalCIFAR10ImageDataset(nominal_class=i, train=True)
+    test_data_nominal = NominalCIFAR10ImageDataset(nominal_class=i, train=False)
+    test_data_anomalous = AnomalousCIFAR10ImageDataset(nominal_class=i, train=False)
 
     print(f'Number of training samples: {len(train_data)}')
     print(f'Number of test samples: {len(test_data_nominal)}')
@@ -32,32 +38,35 @@ for i in range(10):
         soft_tukey_depths = []
 
         def soft_tukey_depth(x, x_, z):
-            return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(1), torch.divide(torch.matmul(torch.subtract(x2, torch.matmul(torch.ones((x_.size(dim=0), 1), device=device), x)), z), torch.norm(z)))))
+            return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(1), torch.divide(torch.matmul(torch.subtract(x_, torch.matmul(torch.ones((x_.size(dim=0), 1), device=device), x)), z), torch.norm(z)))))
 
         for item, x in enumerate(test_dataloader):
             print(f'Item {item}/{len(test_dataloader)}')
             x = x.to(device)
-            z = torch.nn.Parameter(torch.ones(x.size(dim=1), device=device) / torch.tensor(len(train_data)))
+            x_encoding, _ = autoencoder(x)
+            z = torch.nn.Parameter(torch.ones(x_encoding.size(dim=1), device=device) / torch.tensor(len(train_data)))
             optimizer = torch.optim.SGD([z], lr=1e-5)
 
             for j in range(5):
                 for item2, x2 in enumerate(train_dataloader):
                     x2 = x2.to(device)
-                    _soft_tukey_depth = soft_tukey_depth(x, x2, z)
-                    _soft_tukey_depth.backward()
+                    x2_encoding, _ = autoencoder(x2)
+                    _soft_tukey_depth = soft_tukey_depth(x_encoding.detach(), x2_encoding.detach(), z)
+                    _soft_tukey_depth.backward(retain_graph=True)
                     optimizer.step()
 
             _soft_tukey_depth = torch.tensor(0.0, device=device)
             for step2, x2 in enumerate(train_dataloader):
                 x2 = x2.to(device)
-                _soft_tukey_depth = torch.add(_soft_tukey_depth, soft_tukey_depth(x, x2, z))
+                x2_encoding, _ = autoencoder(x2)
+                _soft_tukey_depth = torch.add(_soft_tukey_depth, soft_tukey_depth(x_encoding, x2_encoding, z))
 
             soft_tukey_depths.append(_soft_tukey_depth.item())
             print(f'Soft tukey depth is {_soft_tukey_depth}')
 
         print(soft_tukey_depths)
 
-        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_dataloader.dataset.__class__.__name__}_grayscale_{i}.csv', 'w'))
+        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_dataloader.dataset.__class__.__name__}_AE_{i}.csv', 'w'))
         writer.writerow(soft_tukey_depths)
 
 
