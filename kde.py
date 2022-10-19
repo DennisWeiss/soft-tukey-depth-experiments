@@ -8,19 +8,23 @@ import sys
 
 
 
-CLASS = 0
+CLASS = 2
 
-result_path = f'results/CIFAR10_class{CLASS}_baseline/'
+result_path = f'results/MNIST_class{CLASS}_baseline/'
 
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_NominalCIFAR10Dataset_{CLASS}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_AnomalousCIFAR10Dataset_{CLASS}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_NominalMNISTDataset_{CLASS}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_AnomalousMNISTDataset_{CLASS}.csv'), delimiter=',')
 
 tukey_depths = []
 
+
 for data in [data0, data1]:
     for row, values in enumerate(data):
+        print(row, len(values), data)
         if row == 0:
             tukey_depths.append(np.asarray(list(map(float, values))))
+
+print(len(tukey_depths))
 
 kde_0 = sp.stats.gaussian_kde(tukey_depths[0], bw_method=0.02)
 kde_1 = sp.stats.gaussian_kde(tukey_depths[1], bw_method=0.02)
@@ -43,8 +47,8 @@ plt.title(f'Histogram of soft Tukey depths of test non-{CLASS} classes w.r.t. tr
 fig0_anomalous.savefig(result_path + 'hist_anomalous.png')
 
 fig1 = plt.figure()
-plt.plot(x, y0, label='soft Tukey depths of test 0\'s')
-plt.plot(x, y1, label='soft Tukey depths of test non-0\'s')
+plt.plot(x, y0, label=f'soft Tukey depths of test {CLASS} class')
+plt.plot(x, y1, label=f'soft Tukey depths of test non-{CLASS} classes')
 plt.title(f'KDE of soft Tukey depths of test {CLASS} class and non-{CLASS} classes w.r.t. train {CLASS} class')
 plt.xlabel('soft Tukey depth')
 plt.ylabel('p')

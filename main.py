@@ -1,11 +1,11 @@
 import torch.utils.data
 import csv
 
-from DataLoader import NominalMNISTDataset, AnomalousMNISTDataset, NominalCIFAR10Dataset, AnomalousCIFAR10Dataset, Cellular4GDataset, ToyDataset
+from DataLoader import NominalMNISTDataset, AnomalousMNISTDataset, NominalCIFAR10Dataset, AnomalousCIFAR10Dataset, NominalCIFAR10GrayscaleDataset, AnomalousCIFAR10GrayscaleDataset, Cellular4GDataset, ToyDataset
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'CIFAR10'
+DATASET_NAME = 'MNIST'
 
 if torch.cuda.is_available():
     print('GPU is available with the following device: {}'.format(torch.cuda.get_device_name()))
@@ -16,10 +16,10 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 
-for i in range(1, 10):
-    train_data = NominalCIFAR10Dataset(nominal_class=i, train=True)
-    test_data_nominal = NominalCIFAR10Dataset(nominal_class=i, train=False)
-    test_data_anomalous = AnomalousCIFAR10Dataset(nominal_class=i, train=False)
+for i in range(10):
+    train_data = NominalCIFAR10GrayscaleDataset(nominal_class=i, train=True)
+    test_data_nominal = NominalCIFAR10GrayscaleDataset(nominal_class=i, train=False)
+    test_data_anomalous = AnomalousCIFAR10GrayscaleDataset(nominal_class=i, train=False)
 
     print(f'Number of training samples: {len(train_data)}')
     print(f'Number of test samples: {len(test_data_nominal)}')
@@ -32,7 +32,7 @@ for i in range(1, 10):
         soft_tukey_depths = []
 
         def soft_tukey_depth(x, x_, z):
-            return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(100), torch.divide(torch.matmul(torch.subtract(x2, torch.matmul(torch.ones((x_.size(dim=0), 1), device=device), x)), z), torch.norm(z)))))
+            return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(1), torch.divide(torch.matmul(torch.subtract(x2, torch.matmul(torch.ones((x_.size(dim=0), 1), device=device), x)), z), torch.norm(z)))))
 
         for item, x in enumerate(test_dataloader):
             print(f'Item {item}/{len(test_dataloader)}')
@@ -57,6 +57,7 @@ for i in range(1, 10):
 
         print(soft_tukey_depths)
 
-        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_dataloader.dataset.__class__.__name__}_{i}.csv', 'w'))
+        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_dataloader.dataset.__class__.__name__}_grayscale_{i}.csv', 'w'))
         writer.writerow(soft_tukey_depths)
+
 

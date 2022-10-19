@@ -37,6 +37,42 @@ class Cellular4GDataset(Dataset):
         return self.data.shape[0]
 
 
+class NominalCIFAR10ImageDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.CIFAR10(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+        )
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class AnomalousCIFAR10ImageDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.CIFAR10(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+        )
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
 class NominalCIFAR10Dataset(Dataset):
     def __init__(self, nominal_class, train=True):
         self.data = torchvision.datasets.CIFAR10(
@@ -62,6 +98,42 @@ class AnomalousCIFAR10Dataset(Dataset):
             train=train,
             download=True,
             transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), FlattenTransform()])
+        )
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class NominalCIFAR10GrayscaleDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.CIFAR10(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.Grayscale(), torchvision.transforms.ToTensor(), FlattenTransform()])
+        )
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class AnomalousCIFAR10GrayscaleDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.CIFAR10(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.Grayscale(), torchvision.transforms.ToTensor(), FlattenTransform()])
         )
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
