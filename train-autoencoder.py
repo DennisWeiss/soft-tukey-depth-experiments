@@ -1,5 +1,6 @@
-from DataLoader import NominalCIFAR10ImageDataset
+from DataLoader import NominalCIFAR10ImageDataset, NominalMNISTImageDataset
 from models.RAE_CIFAR10 import RAE_CIFAR10
+from models.RAE_MNIST import RAE_MNIST
 import torchvision
 import torch.utils.data
 import matplotlib.pyplot as plt
@@ -7,8 +8,8 @@ import numpy as np
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'CIFAR10'
-CLASS = 0
+DATASET_NAME = 'MNIST'
+CLASS = 2
 
 if torch.cuda.is_available():
     print('GPU is available with the following device: {}'.format(torch.cuda.get_device_name()))
@@ -18,13 +19,13 @@ else:
 device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_available() else 'cpu')
 print('The model will run with {}'.format(device))
 
-train_data = NominalCIFAR10ImageDataset(nominal_class=CLASS, train=True)
+train_data = NominalMNISTImageDataset(nominal_class=CLASS, train=True)
 
-train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=32)
+train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=128, pin_memory=True)
 
-autoencoder = RAE_CIFAR10()
-print(list(autoencoder.parameters()))
-
+autoencoder = RAE_MNIST()
+# print(list(autoencoder.parameters()))
+print(len(train_dataloader))
 
 def get_loss_rec(x, x_hat):
     return ((x - x_hat).square()).sum(axis=(2, 3)).mean()
@@ -40,16 +41,16 @@ def get_loss_reg(model):
 
 optimizer = torch.optim.Adam(autoencoder.parameters(), lr=3e-4)
 
-for epoch in range(30):
+for epoch in range(11):
     print(f'Epoch {epoch}')
     for step, X in enumerate(train_dataloader):
-        if epoch == 30:
-            plt.imshow(np.transpose(X[0].numpy(), (1, 2, 0)))
-            plt.show()
+        # if epoch == 10:
+        #     plt.imshow(np.transpose(X[0].numpy(), (1, 2, 0)))
+        #     plt.show()
         Z, X_hat = autoencoder(X)
-        if epoch == 30:
-            plt.imshow(np.transpose(X_hat[0].detach().numpy(), (1, 2, 0)))
-            plt.show()
+        # if epoch == 10:
+        #     plt.imshow(np.transpose(X_hat[0].detach().numpy(), (1, 2, 0)))
+        #     plt.show()
 
         total_loss = get_loss_rec(X, X_hat) + 1e-2 * get_loss_rae(Z) + 1e-3 * get_loss_reg(autoencoder)
 
@@ -57,6 +58,7 @@ for epoch in range(30):
         total_loss.backward()
         optimizer.step()
 
+    print('Finished epoch')
     total_loss = torch.tensor(0)
     total_rec_loss = torch.tensor(0)
     for step, X in enumerate(train_dataloader):

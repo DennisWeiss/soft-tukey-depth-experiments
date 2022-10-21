@@ -7,6 +7,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
 from transform import FlattenTransform
+from models.RAE_CIFAR10 import RAE_CIFAR10
 
 
 class Cellular4GDataset(Dataset):
@@ -68,6 +69,62 @@ class AnomalousCIFAR10ImageDataset(Dataset):
 
     def __getitem__(self, item):
         return self.data[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class NominalCIFAR10AEDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.CIFAR10(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+        )
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
+
+        self.data_latent = torch.zeros(len(self.data), 1, 64)
+
+        dataloader = torch.utils.data.DataLoader(self.data)
+        autoencoder = RAE_CIFAR10()
+        autoencoder.load_state_dict(torch.load(f'./snapshots/RAE_CIFAR10_{nominal_class}'))
+
+        for step, x in enumerate(dataloader):
+            z, x_hat = autoencoder(x[0])
+            self.data_latent[step][0] = z.detach()
+
+    def __getitem__(self, item):
+        return self.data_latent[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class AnomalousCIFAR10AEDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.CIFAR10(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+        )
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
+
+        self.data_latent = torch.zeros(len(self.data), 1, 64)
+
+        dataloader = torch.utils.data.DataLoader(self.data)
+        autoencoder = RAE_CIFAR10()
+        autoencoder.load_state_dict(torch.load(f'./snapshots/RAE_CIFAR10_{nominal_class}'))
+
+        for step, x in enumerate(dataloader):
+            z, x_hat = autoencoder(x[0])
+            self.data_latent[step][0] = z.detach()
+
+    def __getitem__(self, item):
+        return self.data_latent[self.indices[item % len(self.indices)]][0]
 
     def __len__(self):
         return len(self.indices)
@@ -208,6 +265,42 @@ class AnomalousMNISTDataset(Dataset):
             train=train,
             download=True,
             transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), FlattenTransform()])
+        )
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class NominalMNISTImageDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.MNIST(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), torchvision.transforms.CenterCrop(33)])
+        )
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class AnomalousMNISTImageDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.MNIST(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), torchvision.transforms.CenterCrop(33)])
         )
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]

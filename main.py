@@ -3,7 +3,7 @@ import csv
 
 from DataLoader import NominalMNISTDataset, AnomalousMNISTDataset, NominalCIFAR10Dataset, AnomalousCIFAR10Dataset, \
     NominalCIFAR10GrayscaleDataset, AnomalousCIFAR10GrayscaleDataset, Cellular4GDataset, ToyDataset, \
-    NominalCIFAR10ImageDataset, AnomalousCIFAR10ImageDataset
+    NominalCIFAR10ImageDataset, AnomalousCIFAR10ImageDataset, NominalCIFAR10AEDataset, AnomalousCIFAR10AEDataset
 from models.RAE_CIFAR10 import RAE_CIFAR10
 
 
@@ -22,17 +22,19 @@ print('The model will run with {}'.format(device))
 autoencoder = RAE_CIFAR10().to(device)
 autoencoder.load_state_dict(torch.load('./snapshots/RAE_CIFAR10_0'))
 
+
+
 for i in range(1):
-    train_data = NominalCIFAR10ImageDataset(nominal_class=i, train=True)
-    test_data_nominal = NominalCIFAR10ImageDataset(nominal_class=i, train=False)
-    test_data_anomalous = AnomalousCIFAR10ImageDataset(nominal_class=i, train=False)
+    train_data = NominalCIFAR10AEDataset(nominal_class=i, train=True)
+    test_data_nominal = NominalCIFAR10AEDataset(nominal_class=i, train=False)
+    test_data_anomalous = AnomalousCIFAR10AEDataset(nominal_class=i, train=False)
 
     print(f'Number of training samples: {len(train_data)}')
     print(f'Number of test samples: {len(test_data_nominal)}')
 
     test_dataloader_nominal = torch.utils.data.DataLoader(test_data_nominal)
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous)
-    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=128)
+    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=16)
 
     for test_dataloader in [test_dataloader_nominal, test_dataloader_anomalous]:
         soft_tukey_depths = []
@@ -43,23 +45,20 @@ for i in range(1):
         for item, x in enumerate(test_dataloader):
             print(f'Item {item}/{len(test_dataloader)}')
             x = x.to(device)
-            x_encoding, _ = autoencoder(x)
-            z = torch.nn.Parameter(torch.ones(x_encoding.size(dim=1), device=device) / torch.tensor(len(train_data)))
+            z = torch.nn.Parameter(torch.ones(x.size(dim=1), device=device) / torch.tensor(len(train_data)))
             optimizer = torch.optim.SGD([z], lr=1e-5)
 
             for j in range(5):
                 for item2, x2 in enumerate(train_dataloader):
                     x2 = x2.to(device)
-                    x2_encoding, _ = autoencoder(x2)
-                    _soft_tukey_depth = soft_tukey_depth(x_encoding.detach(), x2_encoding.detach(), z)
+                    _soft_tukey_depth = soft_tukey_depth(x, x2, z)
                     _soft_tukey_depth.backward(retain_graph=True)
                     optimizer.step()
 
             _soft_tukey_depth = torch.tensor(0.0, device=device)
             for step2, x2 in enumerate(train_dataloader):
                 x2 = x2.to(device)
-                x2_encoding, _ = autoencoder(x2)
-                _soft_tukey_depth = torch.add(_soft_tukey_depth, soft_tukey_depth(x_encoding, x2_encoding, z))
+                _soft_tukey_depth = torch.add(_soft_tukey_depth, soft_tukey_depth(x, x2, z))
 
             soft_tukey_depths.append(_soft_tukey_depth.item())
             print(f'Soft tukey depth is {_soft_tukey_depth}')
