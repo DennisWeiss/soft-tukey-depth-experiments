@@ -9,6 +9,12 @@ from models.RAE_CIFAR10 import RAE_CIFAR10
 
 USE_CUDA_IF_AVAILABLE = True
 DATASET_NAME = 'MNIST'
+NOMINAL_DATASET = NominalMNISTDataset
+ANOMALOUS_DATASET = AnomalousMNISTDataset
+N_CLASSES = 10
+TUKEY_DEPTH_COMPUTATION_EPOCHS = 3
+TUKEY_DEPTH_COMPUTATIONS = 1
+BATCH_SIZE = 16
 
 if torch.cuda.is_available():
     print('GPU is available with the following device: {}'.format(torch.cuda.get_device_name()))
@@ -19,22 +25,17 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 
-autoencoder = RAE_CIFAR10().to(device)
-autoencoder.load_state_dict(torch.load('./snapshots/RAE_CIFAR10_0'))
-
-
-
-for i in range(1):
-    train_data = NominalCIFAR10AEDataset(nominal_class=i, train=True)
-    test_data_nominal = NominalCIFAR10AEDataset(nominal_class=i, train=False)
-    test_data_anomalous = AnomalousCIFAR10AEDataset(nominal_class=i, train=False)
+for i in range(N_CLASSES):
+    train_data = NOMINAL_DATASET(nominal_class=i, train=True)
+    test_data_nominal = NOMINAL_DATASET(nominal_class=i, train=False)
+    test_data_anomalous = ANOMALOUS_DATASET(nominal_class=i, train=False)
 
     print(f'Number of training samples: {len(train_data)}')
     print(f'Number of test samples: {len(test_data_nominal)}')
 
     test_dataloader_nominal = torch.utils.data.DataLoader(test_data_nominal)
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous)
-    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=16)
+    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE)
 
     for test_dataloader in [test_dataloader_nominal, test_dataloader_anomalous]:
         soft_tukey_depths = []
@@ -45,27 +46,33 @@ for i in range(1):
         for item, x in enumerate(test_dataloader):
             print(f'Item {item}/{len(test_dataloader)}')
             x = x.to(device)
-            z = torch.nn.Parameter(torch.ones(x.size(dim=1), device=device) / torch.tensor(len(train_data)))
-            optimizer = torch.optim.SGD([z], lr=1e-5)
+            min_tukey_depth = torch.tensor(100_000_000)
 
-            for j in range(5):
-                for item2, x2 in enumerate(train_dataloader):
+            for j in range(TUKEY_DEPTH_COMPUTATIONS):
+                z = torch.nn.Parameter(torch.rand(x.size(dim=1), device=device) / torch.tensor(len(train_data)))
+                optimizer = torch.optim.SGD([z], lr=1e-5)
+
+                for k in range(TUKEY_DEPTH_COMPUTATION_EPOCHS):
+                    for item2, x2 in enumerate(train_dataloader):
+                        x2 = x2.to(device)
+                        _soft_tukey_depth = soft_tukey_depth(x, x2, z)
+                        _soft_tukey_depth.backward(retain_graph=True)
+                        optimizer.step()
+
+                _soft_tukey_depth = torch.tensor(0.0, device=device)
+                for step2, x2 in enumerate(train_dataloader):
                     x2 = x2.to(device)
-                    _soft_tukey_depth = soft_tukey_depth(x, x2, z)
-                    _soft_tukey_depth.backward(retain_graph=True)
-                    optimizer.step()
+                    _soft_tukey_depth = torch.add(_soft_tukey_depth, soft_tukey_depth(x, x2, z))
 
-            _soft_tukey_depth = torch.tensor(0.0, device=device)
-            for step2, x2 in enumerate(train_dataloader):
-                x2 = x2.to(device)
-                _soft_tukey_depth = torch.add(_soft_tukey_depth, soft_tukey_depth(x, x2, z))
+                if _soft_tukey_depth < min_tukey_depth:
+                    min_tukey_depth = _soft_tukey_depth
 
-            soft_tukey_depths.append(_soft_tukey_depth.item())
-            print(f'Soft tukey depth is {_soft_tukey_depth}')
+            soft_tukey_depths.append(min_tukey_depth.item() / len(train_data))
+            print(f'Soft tukey depth is {min_tukey_depth.item() / len(train_data)}')
 
         print(soft_tukey_depths)
 
-        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_dataloader.dataset.__class__.__name__}_AE_{i}.csv', 'w'))
+        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_dataloader.dataset.__class__.__name__}_{i}.csv', 'w'))
         writer.writerow(soft_tukey_depths)
 
 
