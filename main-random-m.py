@@ -6,6 +6,9 @@ from DataLoader import NominalMNISTDataset, AnomalousMNISTDataset, NominalCIFAR1
 
 USE_CUDA_IF_AVAILABLE = True
 DATASET_NAME = 'CIFAR10'
+NOMINAL_DATASET = NominalCIFAR10Dataset
+ANOMALOUS_DATASET = AnomalousCIFAR10Dataset
+
 
 if torch.cuda.is_available():
     print('GPU is available with the following device: {}'.format(torch.cuda.get_device_name()))
@@ -27,9 +30,9 @@ def get_random_matrix(m, n):
 M = get_random_matrix(100, 3072)
 
 for i in range(10):
-    train_data = NominalCIFAR10Dataset(nominal_class=i, train=True)
-    test_data_nominal = NominalCIFAR10Dataset(nominal_class=i, train=False)
-    test_data_anomalous = AnomalousCIFAR10Dataset(nominal_class=i, train=False)
+    train_data = NOMINAL_DATASET(nominal_class=i, train=True)
+    test_data_nominal = NOMINAL_DATASET(nominal_class=i, train=False)
+    test_data_anomalous = ANOMALOUS_DATASET(nominal_class=i, train=False)
 
     print(f'Number of training samples: {len(train_data)}')
     print(f'Number of test samples: {len(test_data_nominal)}')
@@ -51,7 +54,7 @@ for i in range(10):
             z = torch.nn.Parameter(torch.ones(x.size(dim=1), device=device) / torch.tensor(len(train_data)))
             optimizer = torch.optim.SGD([z], lr=1e-5)
 
-            for j in range(5):
+            for j in range(3):
                 for item2, x2 in enumerate(train_dataloader):
                     x2 = torch.matmul(M, x2.t()).t()
                     x2 = x2.to(device)

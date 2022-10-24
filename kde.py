@@ -5,15 +5,15 @@ import csv
 import matplotlib
 import matplotlib.pyplot as plt
 import sys
+import os
 
 
+CLASS = 1
 
-CLASS = 2
+result_path = f'results/CIFAR10_class{CLASS}_baseline/'
 
-result_path = f'results/MNIST_class{CLASS}_baseline/'
-
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_NominalMNISTDataset_{CLASS}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_AnomalousMNISTDataset_{CLASS}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_NominalCIFAR10Dataset_{CLASS}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_AnomalousCIFAR10Dataset_{CLASS}.csv'), delimiter=',')
 
 tukey_depths = []
 
@@ -26,21 +26,25 @@ for data in [data0, data1]:
 
 print(len(tukey_depths))
 
-kde_0 = sp.stats.gaussian_kde(tukey_depths[0], bw_method=0.02)
-kde_1 = sp.stats.gaussian_kde(tukey_depths[1], bw_method=0.02)
-x = np.arange(0, 150, 0.02)
+if not os.path.exists(result_path):
+    os.makedirs(result_path)
+
+
+kde_0 = sp.stats.gaussian_kde(tukey_depths[0], bw_method=1e-2)
+kde_1 = sp.stats.gaussian_kde(tukey_depths[1], bw_method=1e-2)
+x = np.arange(0, 0.04, 1e-5)
 y0 = kde_0(x)
 y1 = kde_1(x)
 
 fig0_nominal = plt.figure()
-plt.hist(tukey_depths[0][tukey_depths[0] < 50], bins=50)
+plt.hist(tukey_depths[0][tukey_depths[0] < 0.01], bins=50)
 plt.xlabel('soft Tukey depth')
 plt.ylabel('count')
 plt.title(f'Histogram of soft Tukey depths of test {CLASS} class w.r.t. train {CLASS} class')
 fig0_nominal.savefig(result_path + 'hist_nominal.png')
 
 fig0_anomalous = plt.figure()
-plt.hist(tukey_depths[1][tukey_depths[1] < 50], bins=50, color='orange')
+plt.hist(tukey_depths[1][tukey_depths[1] < 0.01], bins=50, color='orange')
 plt.xlabel('soft Tukey depth')
 plt.ylabel('count')
 plt.title(f'Histogram of soft Tukey depths of test non-{CLASS} classes w.r.t. train {CLASS} class')
@@ -85,7 +89,7 @@ def compute_auroc(true_positive_rates, false_positive_rates):
 true_positive_rates = []
 false_positive_rates = []
 
-for threshold in np.arange(0, 100, 0.2):
+for threshold in np.arange(0, 0.04, 4e-6):
     true_positive_rates.append(get_true_positive_rate(tukey_depths[1], threshold))
     false_positive_rates.append(get_false_positive_rate(tukey_depths[0], threshold))
 
@@ -95,4 +99,11 @@ plt.xlabel('false positive rate')
 plt.ylabel('true positive rate')
 fig2.savefig(result_path + 'rate_curve.png')
 
-print(compute_auroc(true_positive_rates, false_positive_rates))
+
+auroc = compute_auroc(true_positive_rates, false_positive_rates)
+
+print(f'AUROC: {auroc}')
+
+result_file = open(result_path + 'result.txt', 'w')
+
+result_file.write(f'AUROC: {auroc}')
