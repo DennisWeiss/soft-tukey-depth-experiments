@@ -25,7 +25,7 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 
-for i in range(2, N_CLASSES):
+for i in range(5, N_CLASSES):
     train_data = NOMINAL_DATASET(nominal_class=i, train=True)
     test_data_nominal = NOMINAL_DATASET(nominal_class=i, train=False)
     test_data_anomalous = ANOMALOUS_DATASET(nominal_class=i, train=False)
