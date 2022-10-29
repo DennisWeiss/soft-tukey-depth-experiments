@@ -3,16 +3,17 @@ import csv
 
 from DataLoader import NominalMNISTDataset, AnomalousMNISTDataset, NominalCIFAR10Dataset, AnomalousCIFAR10Dataset, \
     NominalCIFAR10GrayscaleDataset, AnomalousCIFAR10GrayscaleDataset, Cellular4GDataset, ToyDataset, \
-    NominalCIFAR10ImageDataset, AnomalousCIFAR10ImageDataset, NominalCIFAR10AEDataset, AnomalousCIFAR10AEDataset
+    NominalCIFAR10ImageDataset, AnomalousCIFAR10ImageDataset, NominalCIFAR10AutoencoderDataset, \
+    AnomalousCIFAR10AutoencoderDataset, NominalMNISTAutoencoderDataset, AnomalousMNISTAutoencoderDataset
 from models.RAE_CIFAR10 import RAE_CIFAR10
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'MNIST'
-NOMINAL_DATASET = NominalMNISTDataset
-ANOMALOUS_DATASET = AnomalousMNISTDataset
+DATASET_NAME = 'MNIST_Autoencoder'
+NOMINAL_DATASET = NominalMNISTAutoencoderDataset
+ANOMALOUS_DATASET = AnomalousMNISTAutoencoderDataset
 N_CLASSES = 10
-TUKEY_DEPTH_COMPUTATION_EPOCHS = 3
+TUKEY_DEPTH_COMPUTATION_EPOCHS = 5
 TUKEY_DEPTH_COMPUTATIONS = 1
 BATCH_SIZE = 16
 
