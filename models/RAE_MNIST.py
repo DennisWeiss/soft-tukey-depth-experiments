@@ -15,9 +15,9 @@ class RAE_MNIST(nn.Module):
         self.conv_layer4 = nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=(2, 2), stride=(2, 2))
         self.bn4 = nn.BatchNorm2d(1024)
         self.flatten_layer = nn.Flatten()
-        self.encoding_layer = nn.Linear(1024, 32)
+        self.encoding_layer = nn.Linear(1024, 2)
 
-        self.decoding_layer1 = nn.Linear(32, 6 * 6 * 1024)
+        self.decoding_layer1 = nn.Linear(2, 6 * 6 * 1024)
         self.unflatten_layer = nn.Unflatten(dim=1, unflattened_size=(1024, 6, 6))
         self.bn5 = nn.BatchNorm2d(1024)
         self.convT_layer1 = nn.ConvTranspose2d(in_channels=1024, out_channels=512, kernel_size=(4, 4), stride=(2, 2))

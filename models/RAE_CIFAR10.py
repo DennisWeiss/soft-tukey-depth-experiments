@@ -15,9 +15,9 @@ class RAE_CIFAR10(nn.Module):
         self.conv_layer4 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(5, 5))
         self.bn4 = nn.BatchNorm2d(256)
         self.flatten_layer = nn.Flatten()
-        self.encoding_layer = nn.Linear(1024, 64)
+        self.encoding_layer = nn.Linear(1024, 128)
 
-        self.decoding_layer = nn.Linear(64, 2 * 2 * 256)
+        self.decoding_layer = nn.Linear(128, 2 * 2 * 256)
         self.unflatten_layer = nn.Unflatten(dim=1, unflattened_size=(256, 2, 2))
         self.bn5 = nn.BatchNorm2d(256)
         self.convT_layer1 = nn.ConvTranspose2d(in_channels=256, out_channels=128, kernel_size=(5, 5))

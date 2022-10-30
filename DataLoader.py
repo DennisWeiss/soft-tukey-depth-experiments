@@ -362,7 +362,7 @@ class AnomalousMNISTAutoencoderDataset(Dataset):
             z, x_hat = autoencoder(x[0])
             self.data_latent[step][0] = z.detach()
 
-        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
 
     def __getitem__(self, item):
         return self.data_latent[self.indices[item % len(self.indices)]][0]
