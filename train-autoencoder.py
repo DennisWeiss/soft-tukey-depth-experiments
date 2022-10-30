@@ -76,4 +76,4 @@ for epoch in range(NUM_EPOCHS):
     # print(total_loss.item())
     # print(total_rec_loss.item())
 
-torch.save(autoencoder.state_dict(), f'./snapshots/RAE_{DATASET_NAME}_2_{CLASS}')
+torch.save(autoencoder.state_dict(), f'./snapshots/RAE_{DATASET_NAME}_32_{CLASS}')
