@@ -8,6 +8,7 @@ from sklearn.preprocessing import StandardScaler
 
 from transform import FlattenTransform
 from models.RAE_CIFAR10 import RAE_CIFAR10
+from models.RAE_MNIST import RAE_MNIST
 
 
 class Cellular4GDataset(Dataset):
@@ -74,7 +75,7 @@ class AnomalousCIFAR10ImageDataset(Dataset):
         return len(self.indices)
 
 
-class NominalCIFAR10AEDataset(Dataset):
+class NominalCIFAR10AutoencoderDataset(Dataset):
     def __init__(self, nominal_class, train=True):
         self.data = torchvision.datasets.CIFAR10(
             'datasets',
@@ -102,7 +103,7 @@ class NominalCIFAR10AEDataset(Dataset):
         return len(self.indices)
 
 
-class AnomalousCIFAR10AEDataset(Dataset):
+class AnomalousCIFAR10AutoencoderDataset(Dataset):
     def __init__(self, nominal_class, train=True):
         self.data = torchvision.datasets.CIFAR10(
             'datasets',
@@ -307,6 +308,64 @@ class AnomalousMNISTImageDataset(Dataset):
 
     def __getitem__(self, item):
         return self.data[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class NominalMNISTAutoencoderDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.MNIST(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), torchvision.transforms.CenterCrop(33)])
+        )
+
+        self.data_latent = torch.zeros(len(self.data), 1, 32)
+
+        dataloader = torch.utils.data.DataLoader(self.data)
+        autoencoder = RAE_MNIST()
+        autoencoder.load_state_dict(torch.load(f'./snapshots/RAE_MNIST_32_{nominal_class}'))
+        autoencoder.eval()
+
+        for step, x in enumerate(dataloader):
+            z, x_hat = autoencoder(x[0])
+            self.data_latent[step][0] = z.detach()
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data_latent[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class AnomalousMNISTAutoencoderDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.MNIST(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), torchvision.transforms.CenterCrop(33)])
+        )
+
+        self.data_latent = torch.zeros(len(self.data), 1, 32)
+
+        dataloader = torch.utils.data.DataLoader(self.data)
+        autoencoder = RAE_MNIST()
+        autoencoder.load_state_dict(torch.load(f'./snapshots/RAE_MNIST_32_{nominal_class}'))
+        autoencoder.eval()
+
+        for step, x in enumerate(dataloader):
+            z, x_hat = autoencoder(x[0])
+            self.data_latent[step][0] = z.detach()
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data_latent[self.indices[item % len(self.indices)]][0]
 
     def __len__(self):
         return len(self.indices)

@@ -15,9 +15,9 @@ class RAE_MNIST(nn.Module):
         self.conv_layer4 = nn.Conv2d(in_channels=512, out_channels=1024, kernel_size=(2, 2), stride=(2, 2))
         self.bn4 = nn.BatchNorm2d(1024)
         self.flatten_layer = nn.Flatten()
-        self.encoding_layer = nn.Linear(1024, 16)
+        self.encoding_layer = nn.Linear(1024, 32)
 
-        self.decoding_layer1 = nn.Linear(16, 6 * 6 * 1024)
+        self.decoding_layer1 = nn.Linear(32, 6 * 6 * 1024)
         self.unflatten_layer = nn.Unflatten(dim=1, unflattened_size=(1024, 6, 6))
         self.bn5 = nn.BatchNorm2d(1024)
         self.convT_layer1 = nn.ConvTranspose2d(in_channels=1024, out_channels=512, kernel_size=(4, 4), stride=(2, 2))
@@ -31,7 +31,7 @@ class RAE_MNIST(nn.Module):
         layer2 = F.relu(self.bn2(self.conv_layer2(layer1)))
         layer3 = F.relu(self.bn3(self.conv_layer3(layer2)))
         layer4 = F.relu(self.bn4(self.conv_layer4(layer3)))
-        encoding = F.relu(self.encoding_layer(self.flatten_layer(layer4)))
+        encoding = self.encoding_layer(self.flatten_layer(layer4))
         return encoding
 
     def decoder(self, z):

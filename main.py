@@ -3,16 +3,17 @@ import csv
 
 from DataLoader import NominalMNISTDataset, AnomalousMNISTDataset, NominalCIFAR10Dataset, AnomalousCIFAR10Dataset, \
     NominalCIFAR10GrayscaleDataset, AnomalousCIFAR10GrayscaleDataset, Cellular4GDataset, ToyDataset, \
-    NominalCIFAR10ImageDataset, AnomalousCIFAR10ImageDataset, NominalCIFAR10AEDataset, AnomalousCIFAR10AEDataset
+    NominalCIFAR10ImageDataset, AnomalousCIFAR10ImageDataset, NominalCIFAR10AutoencoderDataset, \
+    AnomalousCIFAR10AutoencoderDataset, NominalMNISTAutoencoderDataset, AnomalousMNISTAutoencoderDataset
 from models.RAE_CIFAR10 import RAE_CIFAR10
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'CIFAR10'
-NOMINAL_DATASET = NominalCIFAR10Dataset
-ANOMALOUS_DATASET = AnomalousCIFAR10Dataset
+DATASET_NAME = 'MNIST_Autoencoder'
+NOMINAL_DATASET = NominalMNISTAutoencoderDataset
+ANOMALOUS_DATASET = AnomalousMNISTAutoencoderDataset
 N_CLASSES = 10
-TUKEY_DEPTH_COMPUTATION_EPOCHS = 3
+TUKEY_DEPTH_COMPUTATION_EPOCHS = 5
 TUKEY_DEPTH_COMPUTATIONS = 1
 BATCH_SIZE = 16
 
@@ -25,7 +26,7 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 
-for i in range(5, N_CLASSES):
+for i in range(N_CLASSES):
     train_data = NOMINAL_DATASET(nominal_class=i, train=True)
     test_data_nominal = NOMINAL_DATASET(nominal_class=i, train=False)
     test_data_anomalous = ANOMALOUS_DATASET(nominal_class=i, train=False)
@@ -37,7 +38,7 @@ for i in range(5, N_CLASSES):
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous)
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE)
 
-    for test_dataloader in [test_dataloader_nominal, test_dataloader_anomalous]:
+    for test_dataloader in [test_dataloader_anomalous]:
         soft_tukey_depths = []
 
         def soft_tukey_depth(x, x_, z):
