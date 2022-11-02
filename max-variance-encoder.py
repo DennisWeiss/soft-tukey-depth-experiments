@@ -140,11 +140,13 @@ for i in range(500):
 
     print('Computed encodings')
 
-    for j in range(n):
-        kde_norm = get_kde_norm_soft_tukey_depth(Y, z_params, KERNEL_BANDWIDTH)
-        kde_norm.backward()
-        optimizer_encoder.step()
+    optimizer_encoder.zero_grad()
+    var = get_variance_soft_tukey_depth(Y, z_params)
+    (-var).backward()
+    optimizer_encoder.step()
 
+    for j in range(n):
+        optimizer_z.zero_grad()
         soft_tukey_depth(Y[j].reshape(1, -1), Y, z_params[j]).backward()
         optimizer_z.step()
         print(z_params[j])
