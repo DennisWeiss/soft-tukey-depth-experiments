@@ -1,7 +1,7 @@
 import torch
 import matplotlib.pyplot as plt
 from DataLoader import NominalMNISTImageDataset
-from models.MNIST_Encoder import MNIST_Encoder
+from models.MNIST_Encoder_Simple import MNIST_Encoder_Simple
 import torch.utils.data
 import numpy as np
 
@@ -9,6 +9,9 @@ import numpy as np
 DATA_SIZE = 500
 USE_CUDA_IF_AVAILABLE = True
 KERNEL_BANDWIDTH = 0.05
+ENCODING_DIM = 32
+
+torch.autograd.set_detect_anomaly(True)
 
 if torch.cuda.is_available():
     print('GPU is available with the following device: {}'.format(torch.cuda.get_device_name()))
@@ -28,23 +31,24 @@ def get_random_matrix(m, n):
 
 
 def soft_tukey_depth(x, x_, z):
-    matmul = torch.matmul(torch.ones((x_.size(dim=0), 1), device=device), x)
+    print(x)
+    matmul = torch.outer(torch.ones(x_.size(dim=0), device=device), x)
     return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(1), torch.divide(
         torch.matmul(torch.subtract(x_, matmul), z),
         torch.norm(z)))))
 
 
-train_data = NominalMNISTImageDataset(nominal_class=0, train=True)
-train_dataloader = torch.utils.data.DataLoader(train_data)
+train_data = torch.utils.data.Subset(NominalMNISTImageDataset(nominal_class=0, train=True), list(range(100)))
+train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=100)
 
-encoder = MNIST_Encoder().to(device)
+encoder = MNIST_Encoder_Simple().to(device)
 encoder.train()
 
 optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=1e-5)
 
 # z = [torch.ones(X.size(dim=1), device=device) for i in range(X.size(dim=0))]
 # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
-z_params = [torch.nn.Parameter(torch.rand(2, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1))) for i in range(len(train_data))]
+z_params = [torch.nn.Parameter(torch.rand(ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1))) for i in range(len(train_data))]
 optimizer_z = torch.optim.SGD(z_params, lr=1e-5)
 
 
@@ -80,7 +84,7 @@ def get_kth_moment_soft_tukey_depth(X, z_params, k):
     n = X.size(dim=0)
     Y = torch.zeros(n)
     for i in range(n):
-        Y[i] = soft_tukey_depth(X[i].reshape(1, -1), X, z_params[i]) / n
+        Y[i] = soft_tukey_depth(X[i], X, z_params[i]) / n
     return torch.pow(Y, k).mean()
 
 
@@ -132,26 +136,26 @@ def draw_scatter_plot(X, z_params):
 for i in range(500):
     print(i)
     n = len(train_data)
-    Y = torch.zeros((n, 2)).to(device)
 
     for step, X in enumerate(train_dataloader):
         X = X.to(device)
-        Y[step] = encoder(X)
+        Y = encoder(X)
 
-    print('Computed encodings')
+        print('Computed encodings')
+        print(Y)
 
-    optimizer_encoder.zero_grad()
-    var = get_variance_soft_tukey_depth(Y, z_params)
-    (-var).backward()
-    optimizer_encoder.step()
+        optimizer_encoder.zero_grad()
+        moment_loss = get_moment_loss(Y, z_params, 4)
+        moment_loss.backward()
+        optimizer_encoder.step()
 
-    for j in range(n):
-        optimizer_z.zero_grad()
-        soft_tukey_depth(Y[j].reshape(1, -1), Y, z_params[j]).backward()
-        optimizer_z.step()
-        print(z_params[j])
+        for j in range(n):
+            optimizer_z.zero_grad()
+            soft_tukey_depth(Y[j], Y, z_params[j]).backward()
+            optimizer_z.step()
+            print(z_params[j])
 
-    draw_scatter_plot(Y, z_params)
+        # draw_scatter_plot(Y, z_params)
 
 
 # for i in range(X.size(dim=0)):
