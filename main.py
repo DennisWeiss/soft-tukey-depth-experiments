@@ -9,9 +9,9 @@ from models.RAE_CIFAR10 import RAE_CIFAR10
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'MNIST_Autoencoder'
-NOMINAL_DATASET = NominalMNISTAutoencoderDataset
-ANOMALOUS_DATASET = AnomalousMNISTAutoencoderDataset
+DATASET_NAME = 'CIFAR10_Autoencoder'
+NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
+ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
 N_CLASSES = 10
 TUKEY_DEPTH_COMPUTATION_EPOCHS = 5
 TUKEY_DEPTH_COMPUTATIONS = 1
@@ -38,11 +38,11 @@ for i in range(N_CLASSES):
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous)
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE)
 
-    for test_dataloader in [test_dataloader_anomalous]:
+    for test_dataloader in [test_dataloader_nominal, test_dataloader_anomalous]:
         soft_tukey_depths = []
 
         def soft_tukey_depth(x, x_, z):
-            return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(1), torch.divide(torch.matmul(torch.subtract(x_, torch.matmul(torch.ones((x_.size(dim=0), 1), device=device), x)), z), torch.norm(z)))))
+            return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(5), torch.divide(torch.matmul(torch.subtract(x_, torch.matmul(torch.ones((x_.size(dim=0), 1), device=device), x)), z), torch.norm(z)))))
 
         for item, x in enumerate(test_dataloader):
             print(f'Item {item}/{len(test_dataloader)}')
