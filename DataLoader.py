@@ -6,9 +6,11 @@ from torch.utils.data import Dataset
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
+from models.AE_MNIST import AE_MNIST
 from transform import FlattenTransform
 from models.RAE_CIFAR10 import RAE_CIFAR10
 from models.RAE_MNIST import RAE_MNIST
+from preprocessing import get_target_label_idx, global_contrast_normalization
 
 
 class Cellular4GDataset(Dataset):
@@ -277,13 +279,29 @@ class AnomalousMNISTDataset(Dataset):
         return len(self.indices)
 
 
+
+min_max_mnist = [(-0.8826567065619495, 9.001545489292527),
+                   (-0.6661464580883915, 20.108062262467364),
+                   (-0.7820454743183202, 11.665100841080346),
+                   (-0.7645772083211267, 12.895051191467457),
+                   (-0.7253923114302238, 12.683235701611533),
+                   (-0.7698501867861425, 13.103278415430502),
+                   (-0.778418217980696, 10.457837397569108),
+                   (-0.7129780970522351, 12.057777597673047),
+                   (-0.8280402650205075, 10.581538445782988),
+                   (-0.7369959242164307, 10.697039838804978)]
+
+
 class NominalMNISTImageDataset(Dataset):
     def __init__(self, nominal_class, train=True):
         self.data = torchvision.datasets.MNIST(
             'datasets',
             train=train,
             download=True,
-            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), torchvision.transforms.CenterCrop(33)])
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
+                                        torchvision.transforms.Lambda(lambda x: global_contrast_normalization(x, scale='l1')),
+                                        torchvision.transforms.Normalize([min_max_mnist[nominal_class][0]],
+                                                             [min_max_mnist[nominal_class][1] - min_max_mnist[nominal_class][0]])])
         )
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
@@ -301,7 +319,10 @@ class AnomalousMNISTImageDataset(Dataset):
             'datasets',
             train=train,
             download=True,
-            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), torchvision.transforms.CenterCrop(33)])
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
+                                        torchvision.transforms.Lambda(lambda x: global_contrast_normalization(x, scale='l1')),
+                                        torchvision.transforms.Normalize([min_max_mnist[nominal_class][0]],
+                                                             [min_max_mnist[nominal_class][1] - min_max_mnist[nominal_class][0]])])
         )
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
@@ -319,14 +340,20 @@ class NominalMNISTAutoencoderDataset(Dataset):
             'datasets',
             train=train,
             download=True,
-            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), torchvision.transforms.CenterCrop(33)])
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
+                                                      torchvision.transforms.Lambda(
+                                                          lambda x: global_contrast_normalization(x, scale='l1')),
+                                                      torchvision.transforms.Normalize(
+                                                          [min_max_mnist[nominal_class][0]],
+                                                          [min_max_mnist[nominal_class][1] -
+                                                           min_max_mnist[nominal_class][0]])])
         )
 
         self.data_latent = torch.zeros(len(self.data), 1, 32)
 
         dataloader = torch.utils.data.DataLoader(self.data)
-        autoencoder = RAE_MNIST()
-        autoencoder.load_state_dict(torch.load(f'./snapshots/RAE_MNIST_32_{nominal_class}'))
+        autoencoder = AE_MNIST()
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_32_{nominal_class}'))
         autoencoder.eval()
 
         for step, x in enumerate(dataloader):
@@ -348,14 +375,20 @@ class AnomalousMNISTAutoencoderDataset(Dataset):
             'datasets',
             train=train,
             download=True,
-            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(), torchvision.transforms.CenterCrop(33)])
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
+                                                      torchvision.transforms.Lambda(
+                                                          lambda x: global_contrast_normalization(x, scale='l1')),
+                                                      torchvision.transforms.Normalize(
+                                                          [min_max_mnist[nominal_class][0]],
+                                                          [min_max_mnist[nominal_class][1] -
+                                                           min_max_mnist[nominal_class][0]])])
         )
 
         self.data_latent = torch.zeros(len(self.data), 1, 32)
 
         dataloader = torch.utils.data.DataLoader(self.data)
-        autoencoder = RAE_MNIST()
-        autoencoder.load_state_dict(torch.load(f'./snapshots/RAE_MNIST_32_{nominal_class}'))
+        autoencoder = AE_MNIST()
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_32_{nominal_class}'))
         autoencoder.eval()
 
         for step, x in enumerate(dataloader):

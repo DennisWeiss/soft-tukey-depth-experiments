@@ -9,7 +9,7 @@ class MNIST_Encoder_Simple(nn.Module):
         self.conv_layer1 = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=(4, 4), stride=(2, 2))
         self.conv_layer2 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(4, 4), stride=(2, 2))
         self.flatten_layer = nn.Flatten()
-        self.encoding_layer = nn.Linear(4608, 32)
+        self.encoding_layer = nn.Linear(4608, 64)
 
     def forward(self, x):
         layer1 = F.relu(self.conv_layer1(x))
