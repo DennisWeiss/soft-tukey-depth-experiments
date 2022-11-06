@@ -13,7 +13,7 @@ from tqdm import tqdm
 USE_CUDA_IF_AVAILABLE = True
 DATASET_NAME = 'CIFAR10'
 # CLASS = 0
-NUM_EPOCHS = 50
+NUM_EPOCHS = 80
 
 
 if torch.cuda.is_available():
@@ -24,7 +24,7 @@ else:
 device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_available() else 'cpu')
 print('The model will run with {}'.format(device))
 
-for CLASS in range(1, 10):
+for CLASS in range(0, 1):
     train_data = NominalCIFAR10ImageDataset(nominal_class=CLASS, train=True)
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=32, pin_memory=True)
 
@@ -99,4 +99,4 @@ for CLASS in range(1, 10):
         print(f'Test total loss: {total_loss.item()}')
         print(f'Test reconstruction loss: {total_rec_loss.item()}')
 
-    torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_50_{CLASS}')
+    torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_200_{CLASS}')

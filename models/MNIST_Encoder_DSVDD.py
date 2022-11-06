@@ -11,7 +11,7 @@ class MNIST_Encoder_DSVDD(nn.Module):
         self.conv_layer2 = nn.Conv2d(in_channels=8, out_channels=4, kernel_size=(5, 5))
         self.max_pool_layer2 = nn.MaxPool2d(kernel_size=(2, 2))
         self.flatten_layer = nn.Flatten()
-        self.encoding_layer = nn.Linear(100, 32)
+        self.encoding_layer = nn.Linear(64, 32)
 
     def forward(self, x):
         layer1 = F.leaky_relu(self.max_pool_layer1(self.conv_layer1(x)), negative_slope=0.1)

@@ -7,9 +7,9 @@ import torch.utils.data
 import numpy as np
 
 
-DATA_SIZE = 500
-TEST_NOMINAL_SIZE = 200
-TEST_ANOMALOUS_SIZE = 200
+DATA_SIZE = 2000
+TEST_NOMINAL_SIZE = 400
+TEST_ANOMALOUS_SIZE = 400
 
 USE_CUDA_IF_AVAILABLE = True
 KERNEL_BANDWIDTH = 0.05
@@ -36,7 +36,7 @@ def get_random_matrix(m, n):
 
 def soft_tukey_depth(x, x_, z):
     matmul = torch.outer(torch.ones(x_.size(dim=0), device=device), x)
-    return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(0.1), torch.divide(
+    return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(5), torch.divide(
         torch.matmul(torch.subtract(x_, matmul), z),
         torch.norm(z)))))
 
@@ -153,11 +153,11 @@ for i in range(30):
 
         optimizer_encoder.zero_grad()
 
-        moment_loss = get_moment_loss(Y, z_params, 4)
-        moment_loss.backward()
+        # moment_loss = get_moment_loss(Y, z_params, 4)
+        # moment_loss.backward()
 
-        # var = get_variance_soft_tukey_depth(Y, z_params)
-        # (-var).backward()
+        var = get_variance_soft_tukey_depth(Y, z_params)
+        (-var).backward()
 
         # inverse_sum_loss = get_inverse_sum_soft_tukey_depth(Y, z_params)
         # (inverse_sum_loss).backward()
@@ -165,7 +165,7 @@ for i in range(30):
         optimizer_encoder.step()
 
         for j in range(n):
-            for k in range(5):
+            for k in range(10):
                 optimizer_encoder.zero_grad()
                 optimizer_z.zero_grad()
                 _soft_tukey_depth = soft_tukey_depth(Y[j].detach(), Y.detach(), z_params[j])
