@@ -208,7 +208,7 @@ for NOMINAL_CLASS in range(10):
                             _soft_tukey_depth.backward()
                             optimizer_z_test_nominal.step()
                         _soft_tukey_depth = soft_tukey_depth(Y_test_nominal[j].detach(), Y.detach(), z_test_nominal[j])
-                        soft_tukey_depths.append(_soft_tukey_depth / len(test_data_nominal))
+                        soft_tukey_depths.append(_soft_tukey_depth.item() / len(test_data_nominal))
 
                     if ENCODING_DIM == 2:
                         draw_scatter_plot(Y_test_nominal, z_test_nominal)
@@ -234,7 +234,7 @@ for NOMINAL_CLASS in range(10):
                             _soft_tukey_depth.backward()
                             optimizer_z_test_anomalous.step()
                         _soft_tukey_depth = soft_tukey_depth(Y_test_anomalous[j].detach(), Y.detach(), z_test_anomalous[j])
-                        soft_tukey_depths.append(_soft_tukey_depth / len(test_data_anomalous))
+                        soft_tukey_depths.append(_soft_tukey_depth.item() / len(test_data_anomalous))
 
                     if ENCODING_DIM == 2:
                         draw_scatter_plot(Y_test_anomalous, z_test_anomalous)
