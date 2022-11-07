@@ -6,6 +6,7 @@ from DataLoader import NominalMNISTImageDataset, AnomalousMNISTImageDataset, Nom
 from models.MNIST_Encoder_Simple import MNIST_Encoder_Simple
 from models.MNIST_Encoder_DSVDD import MNIST_Encoder_DSVDD
 from models.CIFAR10_Encoder_Simple import CIFAR10_Encoder_Simple
+from models.CIFAR10_Encoder_V3 import CIFAR10_Encoder_V3
 import torch.utils.data
 import numpy as np
 
@@ -19,7 +20,7 @@ TEST_ANOMALOUS_SIZE = 2000
 
 USE_CUDA_IF_AVAILABLE = True
 KERNEL_BANDWIDTH = 0.05
-ENCODING_DIM = 128
+ENCODING_DIM = 512
 HISTOGRAM_BINS = 50
 
 torch.autograd.set_detect_anomaly(True)
@@ -57,7 +58,7 @@ test_dataloader_nominal = torch.utils.data.DataLoader(test_data_nominal, batch_s
 test_data_anomalous = torch.utils.data.Subset(AnomalousCIFAR10ImageDataset(nominal_class=NOMINAL_CLASS, train=False), list(range(TEST_ANOMALOUS_SIZE)))
 test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=TEST_ANOMALOUS_SIZE)
 
-encoder = CIFAR10_Encoder_Simple().to(device)
+encoder = CIFAR10_Encoder_V3().to(device)
 encoder.train()
 
 optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=1e-3)
@@ -211,7 +212,7 @@ for i in range(30):
                 draw_histogram(Y_test_nominal, Y, z_test_nominal, bins=HISTOGRAM_BINS)
 
                 writer = csv.writer(open(
-                    f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_data_nominal.__class__.__name__}_Encoder_{NOMINAL_CLASS}.csv',
+                    f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_data_nominal.__class__.__name__}_Encoder_V3_{NOMINAL_CLASS}.csv',
                     'w'))
                 writer.writerow(soft_tukey_depths)
 
@@ -237,7 +238,7 @@ for i in range(30):
                 draw_histogram(Y_test_anomalous, Y, z_test_anomalous, bins=HISTOGRAM_BINS)
 
                 writer = csv.writer(open(
-                    f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_data_anomalous.__class__.__name__}_Encoder_{NOMINAL_CLASS}.csv',
+                    f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_data_anomalous.__class__.__name__}_Encoder_V3_{NOMINAL_CLASS}.csv',
                     'w'))
                 writer.writerow(soft_tukey_depths)
 
