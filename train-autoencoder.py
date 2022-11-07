@@ -25,7 +25,7 @@ else:
 device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_available() else 'cpu')
 print('The model will run with {}'.format(device))
 
-for CLASS in range(0, 1):
+for CLASS in range(1, 10):
     train_data = NominalCIFAR10ImageDataset(nominal_class=CLASS, train=True)
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=32, pin_memory=True)
 
