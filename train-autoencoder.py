@@ -3,6 +3,7 @@ from models.AE_CIFAR10 import AE_CIFAR10
 from models.RAE_CIFAR10 import RAE_CIFAR10
 from models.RAE_MNIST import RAE_MNIST
 from models.AE_MNIST import AE_MNIST
+from models.AE_CIFAR10_V3 import AE_CIFAR10_V3
 import torchvision
 import torch.utils.data
 import matplotlib.pyplot as plt
@@ -31,7 +32,7 @@ for CLASS in range(0, 1):
     test_data = NominalCIFAR10ImageDataset(nominal_class=CLASS, train=False)
     test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=32, pin_memory=True)
 
-    autoencoder = AE_CIFAR10().to(device)
+    autoencoder = AE_CIFAR10_V3().to(device)
     # print(list(autoencoder.parameters()))
     print(len(train_dataloader))
 
@@ -99,4 +100,4 @@ for CLASS in range(0, 1):
         print(f'Test total loss: {total_loss.item()}')
         print(f'Test reconstruction loss: {total_rec_loss.item()}')
 
-    torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_200_{CLASS}')
+    torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_V3_{CLASS}')

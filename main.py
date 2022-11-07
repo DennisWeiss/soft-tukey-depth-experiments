@@ -73,7 +73,7 @@ for i in range(N_CLASSES):
 
         print(soft_tukey_depths)
 
-        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_dataloader.dataset.__class__.__name__}_{i}.csv', 'w'))
+        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_dataloader.dataset.__class__.__name__}_compl_{i}.csv', 'w'))
         writer.writerow(soft_tukey_depths)
 
 
