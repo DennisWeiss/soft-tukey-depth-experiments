@@ -13,9 +13,9 @@ import numpy as np
 
 NOMINAL_CLASS = 0
 DATASET_NAME = 'CIFAR10'
-DATA_SIZE = 2000
+DATA_SIZE = 1500
 TEST_NOMINAL_SIZE = 1000
-TEST_ANOMALOUS_SIZE = 2000
+TEST_ANOMALOUS_SIZE = 1500
 
 
 USE_CUDA_IF_AVAILABLE = True
@@ -212,7 +212,7 @@ for i in range(30):
                 draw_histogram(Y_test_nominal, Y, z_test_nominal, bins=HISTOGRAM_BINS)
 
                 writer = csv.writer(open(
-                    f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_data_nominal.__class__.__name__}_Encoder_V3_{NOMINAL_CLASS}.csv',
+                    f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_V3_{NOMINAL_CLASS}.csv',
                     'w'))
                 writer.writerow(soft_tukey_depths)
 
@@ -238,7 +238,7 @@ for i in range(30):
                 draw_histogram(Y_test_anomalous, Y, z_test_anomalous, bins=HISTOGRAM_BINS)
 
                 writer = csv.writer(open(
-                    f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{test_data_anomalous.__class__.__name__}_Encoder_V3_{NOMINAL_CLASS}.csv',
+                    f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_V3_{NOMINAL_CLASS}.csv',
                     'w'))
                 writer.writerow(soft_tukey_depths)
 

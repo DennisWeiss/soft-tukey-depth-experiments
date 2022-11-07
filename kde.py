@@ -8,12 +8,12 @@ import sys
 import os
 
 
-CLASS = 4
+CLASS = 9
 
-result_path = f'results/CIFAR10_class{CLASS}_M/'
+result_path = f'results/CIFAR10_class{CLASS}_AE/'
 
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_NominalCIFAR10Dataset_M_{CLASS}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_AnomalousCIFAR10Dataset_M_{CLASS}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_NominalCIFAR10AutoencoderDataset_temp1_{CLASS}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_AnomalousCIFAR10AutoencoderDataset_temp1_{CLASS}.csv'), delimiter=',')
 
 tukey_depths = []
 

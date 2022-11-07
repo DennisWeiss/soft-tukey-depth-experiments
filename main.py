@@ -42,7 +42,7 @@ for i in range(N_CLASSES):
         soft_tukey_depths = []
 
         def soft_tukey_depth(x, x_, z):
-            return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(5), torch.divide(torch.matmul(torch.subtract(x_, torch.matmul(torch.ones((x_.size(dim=0), 1), device=device), x)), z), torch.norm(z)))))
+            return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(1), torch.divide(torch.matmul(torch.subtract(x_, torch.matmul(torch.ones((x_.size(dim=0), 1), device=device), x)), z), torch.norm(z)))))
 
         for item, x in enumerate(test_dataloader):
             print(f'Item {item}/{len(test_dataloader)}')
