@@ -25,12 +25,13 @@ else:
 device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_available() else 'cpu')
 print('The model will run with {}'.format(device))
 
-for CLASS in range(10):
+for CLASS in range(1):
+    CLASS = 'all'
     train_data = NominalMNISTImageDataset(nominal_class=CLASS, train=True)
-    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=32, pin_memory=True)
+    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=16, pin_memory=True)
 
     test_data = NominalMNISTImageDataset(nominal_class=CLASS, train=False)
-    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=32, pin_memory=True)
+    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=16, pin_memory=True)
 
     autoencoder = AE_MNIST().to(device)
     # print(list(autoencoder.parameters()))

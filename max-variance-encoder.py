@@ -57,13 +57,16 @@ def get_mean_soft_tukey_depth(X, z_params):
     return mean.divide(X.size(dim=0))
 
 
-def get_variance_soft_tukey_depth(X, z_params):
+def get_variance_soft_tukey_depth_with_mean(X, z_params, mean):
     n = X.size(dim=0)
-    mean = get_mean_soft_tukey_depth(X, z_params)
     var = torch.tensor(0)
     for i in range(n):
         var = var.add(torch.square(soft_tukey_depth(X[i], X, z_params[i]).divide(n).subtract(mean)))
     return var.divide(n - 1)
+
+
+def get_variance_soft_tukey_depth(X, z_params):
+    return get_variance_soft_tukey_depth_with_mean(X, z_params, get_mean_soft_tukey_depth(X, z_params))
 
 
 def get_kde_norm_soft_tukey_depth(X, z_params, bandwidth):
@@ -241,7 +244,7 @@ for NOMINAL_CLASS in range(10):
                     draw_histogram(Y_test_anomalous, Y, z_test_anomalous, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_Simple_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_temp10_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 

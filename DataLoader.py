@@ -293,6 +293,8 @@ min_max_mnist = [(-0.8826567065619495, 9.001545489292527),
                    (-0.8280402650205075, 10.581538445782988),
                    (-0.7369959242164307, 10.697039838804978)]
 
+min_max_mnist_all = (-0.8826567065619495, 20.108062262467364)
+
 
 class NominalMNISTImageDataset(Dataset):
     def __init__(self, nominal_class, train=True):
@@ -302,11 +304,11 @@ class NominalMNISTImageDataset(Dataset):
             download=True,
             transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
                                         torchvision.transforms.Lambda(lambda x: global_contrast_normalization(x, scale='l1')),
-                                        torchvision.transforms.Normalize([min_max_mnist[nominal_class][0]],
-                                                             [min_max_mnist[nominal_class][1] - min_max_mnist[nominal_class][0]])])
+                                        torchvision.transforms.Normalize([(min_max_mnist_all if nominal_class == 'all' else min_max_mnist[nominal_class])[0]],
+                                                             [(min_max_mnist_all if nominal_class == 'all' else min_max_mnist[nominal_class])[1] - (min_max_mnist_all if nominal_class == 'all' else min_max_mnist[nominal_class])[0]])])
         )
 
-        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
+        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0] if nominal_class != 'all' else list(range(len(self.data)))
 
     def __getitem__(self, item):
         return self.data[self.indices[item % len(self.indices)]][0]
@@ -323,11 +325,20 @@ class AnomalousMNISTImageDataset(Dataset):
             download=True,
             transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
                                         torchvision.transforms.Lambda(lambda x: global_contrast_normalization(x, scale='l1')),
-                                        torchvision.transforms.Normalize([min_max_mnist[nominal_class][0]],
-                                                             [min_max_mnist[nominal_class][1] - min_max_mnist[nominal_class][0]])])
+                                                      torchvision.transforms.Normalize([(
+                                                                                            min_max_mnist_all if nominal_class == 'all' else
+                                                                                            min_max_mnist[
+                                                                                                nominal_class])[0]],
+                                                                                       [(
+                                                                                            min_max_mnist_all if nominal_class == 'all' else
+                                                                                            min_max_mnist[
+                                                                                                nominal_class])[1] - (
+                                                                                            min_max_mnist_all if nominal_class == 'all' else
+                                                                                            min_max_mnist[
+                                                                                                nominal_class])[0]])])
         )
 
-        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0] if nominal_class != 'all' else list(range(len(self.data)))
 
     def __getitem__(self, item):
         return self.data[self.indices[item % len(self.indices)]][0]
