@@ -417,6 +417,76 @@ class AnomalousMNISTAutoencoderDataset(Dataset):
         return len(self.indices)
 
 
+class NominalMNISTAutoencoderAllDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.MNIST(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
+                                                      torchvision.transforms.Lambda(
+                                                          lambda x: global_contrast_normalization(x, scale='l1')),
+                                                      torchvision.transforms.Normalize(
+                                                          [min_max_mnist[nominal_class][0]],
+                                                          [min_max_mnist[nominal_class][1] -
+                                                           min_max_mnist[nominal_class][0]])])
+        )
+
+        self.data_latent = torch.zeros(len(self.data), 1, 32)
+
+        dataloader = torch.utils.data.DataLoader(self.data)
+        autoencoder = AE_MNIST()
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_32_all'))
+        autoencoder.eval()
+
+        for step, x in enumerate(dataloader):
+            z, x_hat = autoencoder(x[0])
+            self.data_latent[step][0] = z.detach()
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data_latent[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class AnomalousMNISTAutoencoderAllDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.MNIST(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
+                                                      torchvision.transforms.Lambda(
+                                                          lambda x: global_contrast_normalization(x, scale='l1')),
+                                                      torchvision.transforms.Normalize(
+                                                          [min_max_mnist[nominal_class][0]],
+                                                          [min_max_mnist[nominal_class][1] -
+                                                           min_max_mnist[nominal_class][0]])])
+        )
+
+        self.data_latent = torch.zeros(len(self.data), 1, 32)
+
+        dataloader = torch.utils.data.DataLoader(self.data)
+        autoencoder = AE_MNIST()
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_32_all'))
+        autoencoder.eval()
+
+        for step, x in enumerate(dataloader):
+            z, x_hat = autoencoder(x[0])
+            self.data_latent[step][0] = z.detach()
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data_latent[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
 class ToyDataset(Dataset):
     def __init__(self):
         self.data = torch.tensor([[0, 0], [1, 1], [-2, 2], [0, 2], [2, 2], [-2, 3], [0, 3], [2, 3]], dtype=torch.float)
