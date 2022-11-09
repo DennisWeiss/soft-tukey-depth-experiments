@@ -12,19 +12,19 @@ import torch.utils.data
 import numpy as np
 
 
-DATASET_NAME = 'CIFAR10'
-NOMINAL_DATASET = NominalCIFAR10ImageDataset
-ANOMALOUS_DATASET = AnomalousCIFAR10ImageDataset
-DATA_SIZE = 1000
+DATASET_NAME = 'MNIST'
+NOMINAL_DATASET = NominalMNISTImageDataset
+ANOMALOUS_DATASET = AnomalousMNISTImageDataset
+DATA_SIZE = 2000
 TEST_NOMINAL_SIZE = 1000
-TEST_ANOMALOUS_SIZE = 1000
+TEST_ANOMALOUS_SIZE = 2000
 
 
 USE_CUDA_IF_AVAILABLE = True
 KERNEL_BANDWIDTH = 0.05
-ENCODING_DIM = 256
+ENCODING_DIM = 64
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 20
+NUM_EPOCHS = 30
 STD_ITERATIONS = 5
 
 torch.autograd.set_detect_anomaly(True)
@@ -48,7 +48,7 @@ def get_random_matrix(m, n):
 
 def soft_tukey_depth(x, x_, z):
     matmul = torch.outer(torch.ones(x_.size(dim=0), device=device), x)
-    return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(1), torch.divide(
+    return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(2), torch.divide(
         torch.matmul(torch.subtract(x_, matmul), z),
         torch.norm(z)))))
 
@@ -138,7 +138,7 @@ def draw_scatter_plot(X, z_params):
     X_scatter_plot.show()
 
 
-for NOMINAL_CLASS in range(10):
+for NOMINAL_CLASS in range(8, 10):
 
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True), list(range(DATA_SIZE)))
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
@@ -228,7 +228,7 @@ for NOMINAL_CLASS in range(10):
                     draw_histogram(Y_test_nominal, Y, z_test_nominal, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_smaller_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_Simple_temp2_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 
@@ -254,7 +254,7 @@ for NOMINAL_CLASS in range(10):
                     draw_histogram(Y_test_anomalous, Y, z_test_anomalous, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_smaller_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_Simple_temp2_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 

@@ -30,21 +30,21 @@ if not os.path.exists(result_path):
     os.makedirs(result_path)
 
 
-kde_0 = sp.stats.gaussian_kde(tukey_depths[0], bw_method=1e-2)
-kde_1 = sp.stats.gaussian_kde(tukey_depths[1], bw_method=1e-2)
-x = np.arange(0, 0.04, 1e-5)
+kde_0 = sp.stats.gaussian_kde(tukey_depths[0], bw_method=1e-1)
+kde_1 = sp.stats.gaussian_kde(tukey_depths[1], bw_method=1e-1)
+x = np.arange(0, 0.5, 1e-5)
 y0 = kde_0(x)
 y1 = kde_1(x)
 
 fig0_nominal = plt.figure()
-plt.hist(tukey_depths[0][tukey_depths[0] < 0.01], bins=50)
+plt.hist(tukey_depths[0][tukey_depths[0] < 0.5], bins=50)
 plt.xlabel('soft Tukey depth')
 plt.ylabel('count')
 plt.title(f'Histogram of soft Tukey depths of test {CLASS} class w.r.t. train {CLASS} class')
 fig0_nominal.savefig(result_path + 'hist_nominal.png')
 
 fig0_anomalous = plt.figure()
-plt.hist(tukey_depths[1][tukey_depths[1] < 0.01], bins=50, color='orange')
+plt.hist(tukey_depths[1][tukey_depths[1] < 0.5], bins=50, color='orange')
 plt.xlabel('soft Tukey depth')
 plt.ylabel('count')
 plt.title(f'Histogram of soft Tukey depths of test non-{CLASS} classes w.r.t. train {CLASS} class')
@@ -89,7 +89,7 @@ def compute_auroc(true_positive_rates, false_positive_rates):
 true_positive_rates = []
 false_positive_rates = []
 
-for threshold in np.arange(0, 0.04, 4e-6):
+for threshold in np.arange(0, 0.5, 3e-6):
     true_positive_rates.append(get_true_positive_rate(tukey_depths[1], threshold))
     false_positive_rates.append(get_false_positive_rate(tukey_depths[0], threshold))
 
