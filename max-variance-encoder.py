@@ -138,7 +138,7 @@ def draw_scatter_plot(X, z_params):
     X_scatter_plot.show()
 
 
-for NOMINAL_CLASS in range(8, 10):
+for NOMINAL_CLASS in range(10):
 
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True), list(range(DATA_SIZE)))
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
@@ -149,7 +149,7 @@ for NOMINAL_CLASS in range(8, 10):
     test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=NOMINAL_CLASS, train=False), list(range(TEST_ANOMALOUS_SIZE)))
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=TEST_ANOMALOUS_SIZE)
 
-    encoder = CIFAR10_Encoder_V4().to(device)
+    encoder = MNIST_Encoder_Simple().to(device)
     encoder.train()
 
     optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=1e-2)
@@ -186,11 +186,11 @@ for NOMINAL_CLASS in range(8, 10):
             print(f'Total norm: {torch.linalg.norm(Y, dim=1).sum().item()}')
             print(f'Total point value: {Y.sum(dim=0).sum()}')
             # ((0 * -var).add(1e+4 * (torch.square(torch.linalg.norm(Y, dim=1).sum().subtract(DATA_SIZE)))).add(1e+3 * torch.square(Y.sum(dim=0)).sum())).backward()
-            (-var).backward()
+            # (-var).backward()
 
-            # moment_loss = get_moment_loss(Y, z_params, 4)
-            # print(f'Moment loss: {moment_loss.item()}')
-            # moment_loss.backward()
+            moment_loss = get_moment_loss(Y, z_params, 3)
+            print(f'Moment loss: {moment_loss.item()}')
+            moment_loss.backward()
 
             # inverse_sum_loss = get_inverse_sum_soft_tukey_depth(Y, z_params)
             # (inverse_sum_loss).backward()
