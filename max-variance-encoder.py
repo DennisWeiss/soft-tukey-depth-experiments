@@ -228,7 +228,7 @@ for NOMINAL_CLASS in range(10):
                     draw_histogram(Y_test_nominal, Y, z_test_nominal, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_Simple_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_smaller_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 
@@ -254,7 +254,7 @@ for NOMINAL_CLASS in range(10):
                     draw_histogram(Y_test_anomalous, Y, z_test_anomalous, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_smaller_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 
