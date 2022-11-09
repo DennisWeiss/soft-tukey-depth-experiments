@@ -15,9 +15,9 @@ import numpy as np
 DATASET_NAME = 'CIFAR10'
 NOMINAL_DATASET = NominalCIFAR10ImageDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10ImageDataset
-DATA_SIZE = 2000
+DATA_SIZE = 1000
 TEST_NOMINAL_SIZE = 1000
-TEST_ANOMALOUS_SIZE = 2000
+TEST_ANOMALOUS_SIZE = 1000
 
 
 USE_CUDA_IF_AVAILABLE = True
@@ -25,6 +25,7 @@ KERNEL_BANDWIDTH = 0.05
 ENCODING_DIM = 256
 HISTOGRAM_BINS = 50
 NUM_EPOCHS = 20
+STD_ITERATIONS = 5
 
 torch.autograd.set_detect_anomaly(True)
 
@@ -168,7 +169,7 @@ for NOMINAL_CLASS in range(10):
             Y = encoder(X)
 
             for j in range(n):
-                for k in range(10):
+                for k in range(STD_ITERATIONS):
                     optimizer_encoder.zero_grad()
                     optimizer_z.zero_grad()
                     _soft_tukey_depth = soft_tukey_depth(Y[j].detach(), Y.detach(), z_params[j])
@@ -195,8 +196,6 @@ for NOMINAL_CLASS in range(10):
             # (inverse_sum_loss).backward()
 
             optimizer_encoder.step()
-
-
 
 
             if i % 3 == 0:
