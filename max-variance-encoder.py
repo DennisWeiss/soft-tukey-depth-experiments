@@ -22,7 +22,7 @@ TEST_ANOMALOUS_SIZE = 2000
 
 USE_CUDA_IF_AVAILABLE = True
 KERNEL_BANDWIDTH = 0.05
-ENCODING_DIM = 2
+ENCODING_DIM = 256
 HISTOGRAM_BINS = 50
 NUM_EPOCHS = 20
 
@@ -47,7 +47,7 @@ def get_random_matrix(m, n):
 
 def soft_tukey_depth(x, x_, z):
     matmul = torch.outer(torch.ones(x_.size(dim=0), device=device), x)
-    return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(10), torch.divide(
+    return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(1), torch.divide(
         torch.matmul(torch.subtract(x_, matmul), z),
         torch.norm(z)))))
 
