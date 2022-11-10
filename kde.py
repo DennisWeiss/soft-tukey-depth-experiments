@@ -8,12 +8,12 @@ import sys
 import os
 
 
-CLASS = 0
+CLASS = 8
 
 result_path = f'results/MNIST_class{CLASS}_Encoder/'
 
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Autoencoder_NominalMNISTAutoencoderDataset_{CLASS}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Autoencoder_AnomalousMNISTAutoencoderDataset_{CLASS}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Nominal_Encoder_Simple_temp2_{CLASS}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Anomalous_Encoder_Simple_temp2_{CLASS}.csv'), delimiter=',')
 
 tukey_depths = []
 
