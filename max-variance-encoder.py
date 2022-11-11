@@ -186,11 +186,11 @@ for NOMINAL_CLASS in range(9, 10):
             print(f'Total norm: {torch.linalg.norm(Y, dim=1).sum().item()}')
             print(f'Total point value: {Y.sum(dim=0).sum()}')
             # ((0 * -var).add(1e+4 * (torch.square(torch.linalg.norm(Y, dim=1).sum().subtract(DATA_SIZE)))).add(1e+3 * torch.square(Y.sum(dim=0)).sum())).backward()
-            (-var).backward()
+            # (-var).backward()
 
-            # moment_loss = get_moment_loss(Y, z_params, 3)
-            # print(f'Moment loss: {moment_loss.item()}')
-            # moment_loss.backward()
+            moment_loss = get_moment_loss(Y, z_params, 3)
+            print(f'Moment loss: {moment_loss.item()}')
+            moment_loss.backward()
 
             # inverse_sum_loss = get_inverse_sum_soft_tukey_depth(Y, z_params)
             # (inverse_sum_loss).backward()
@@ -228,7 +228,7 @@ for NOMINAL_CLASS in range(9, 10):
                     draw_histogram(Y_test_nominal, Y, z_test_nominal, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_Simple_temp2_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_mom_temp2_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 
@@ -254,7 +254,7 @@ for NOMINAL_CLASS in range(9, 10):
                     draw_histogram(Y_test_anomalous, Y, z_test_anomalous, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_Simple_temp2_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_mom_temp2_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 
