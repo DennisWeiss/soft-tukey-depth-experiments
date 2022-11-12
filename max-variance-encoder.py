@@ -15,9 +15,9 @@ import numpy as np
 DATASET_NAME = 'CIFAR10'
 NOMINAL_DATASET = NominalCIFAR10ImageDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10ImageDataset
-DATA_SIZE = 1000
+DATA_SIZE = 1500
 TEST_NOMINAL_SIZE = 1000
-TEST_ANOMALOUS_SIZE = 1000
+TEST_ANOMALOUS_SIZE = 1500
 
 
 USE_CUDA_IF_AVAILABLE = True
@@ -25,7 +25,7 @@ KERNEL_BANDWIDTH = 0.05
 SOFT_TUKEY_DEPTH_TEMP = 1
 ENCODING_DIM = 256
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 20
+NUM_EPOCHS = 30
 STD_ITERATIONS = 5
 
 torch.autograd.set_detect_anomaly(True)
@@ -153,7 +153,7 @@ for NOMINAL_CLASS in range(10):
     encoder = CIFAR10_Encoder_V4().to(device)
     encoder.train()
 
-    optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=1e-3)
+    optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=3e-3)
 
     # z = [torch.ones(X.size(dim=1), device=device) for i in range(X.size(dim=0))]
     # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
