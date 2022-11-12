@@ -26,7 +26,6 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 for CLASS in range(1):
-    CLASS = 'all'
     train_data = NominalMNISTImageDataset(nominal_class=CLASS, train=True)
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=16, pin_memory=True)
 

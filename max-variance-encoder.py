@@ -22,6 +22,7 @@ TEST_ANOMALOUS_SIZE = 1000
 
 USE_CUDA_IF_AVAILABLE = True
 KERNEL_BANDWIDTH = 0.05
+SOFT_TUKEY_DEPTH_TEMP = 0.5
 ENCODING_DIM = 64
 HISTOGRAM_BINS = 50
 NUM_EPOCHS = 20
@@ -48,7 +49,7 @@ def get_random_matrix(m, n):
 
 def soft_tukey_depth(x, x_, z):
     matmul = torch.outer(torch.ones(x_.size(dim=0), device=device), x)
-    return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(2), torch.divide(
+    return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(1 / SOFT_TUKEY_DEPTH_TEMP), torch.divide(
         torch.matmul(torch.subtract(x_, matmul), z),
         torch.norm(z)))))
 
@@ -138,7 +139,7 @@ def draw_scatter_plot(X, z_params):
     X_scatter_plot.show()
 
 
-for NOMINAL_CLASS in range(9, 10):
+for NOMINAL_CLASS in range(10):
 
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True), list(range(DATA_SIZE)))
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
@@ -152,7 +153,7 @@ for NOMINAL_CLASS in range(9, 10):
     encoder = MNIST_Encoder_Simple().to(device)
     encoder.train()
 
-    optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=1e-2)
+    optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=1e-3)
 
     # z = [torch.ones(X.size(dim=1), device=device) for i in range(X.size(dim=0))]
     # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
@@ -186,11 +187,11 @@ for NOMINAL_CLASS in range(9, 10):
             print(f'Total norm: {torch.linalg.norm(Y, dim=1).sum().item()}')
             print(f'Total point value: {Y.sum(dim=0).sum()}')
             # ((0 * -var).add(1e+4 * (torch.square(torch.linalg.norm(Y, dim=1).sum().subtract(DATA_SIZE)))).add(1e+3 * torch.square(Y.sum(dim=0)).sum())).backward()
-            # (-var).backward()
+            (-var).backward()
 
-            moment_loss = get_moment_loss(Y, z_params, 3)
-            print(f'Moment loss: {moment_loss.item()}')
-            moment_loss.backward()
+            # moment_loss = get_moment_loss(Y, z_params, 3)
+            # print(f'Moment loss: {moment_loss.item()}')
+            # moment_loss.backward()
 
             # inverse_sum_loss = get_inverse_sum_soft_tukey_depth(Y, z_params)
             # (inverse_sum_loss).backward()
@@ -228,7 +229,7 @@ for NOMINAL_CLASS in range(9, 10):
                     draw_histogram(Y_test_nominal, Y, z_test_nominal, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_mom_temp2_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_v1_temp2_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 
@@ -254,12 +255,12 @@ for NOMINAL_CLASS in range(9, 10):
                     draw_histogram(Y_test_anomalous, Y, z_test_anomalous, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_mom_temp2_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_v1_temp2_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 
 
-    torch.save(encoder.state_dict(), f'./snapshots/{DATASET_NAME}_Encoder_{NOMINAL_CLASS}')
+    torch.save(encoder.state_dict(), f'./snapshots/{DATASET_NAME}_Encoder_temp2_{NOMINAL_CLASS}')
 
     # for i in range(X.size(dim=0)):
     #     print(soft_tukey_depth(X[i].reshape(1, -1), X, z_params[i]))

@@ -10,10 +10,10 @@ import os
 
 CLASS = 9
 
-result_path = f'results/MNIST_class{CLASS}_Encoder/'
+result_path = f'results/MNIST_class{CLASS}_Encoder_temp2_v1/'
 
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Nominal_Encoder_Simple_temp2_{CLASS}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Anomalous_Encoder_Simple_temp2_{CLASS}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Nominal_Encoder_v1_temp2_{CLASS}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Anomalous_Encoder_v1_temp2_{CLASS}.csv'), delimiter=',')
 
 tukey_depths = []
 
