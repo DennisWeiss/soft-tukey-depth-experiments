@@ -22,7 +22,7 @@ TEST_ANOMALOUS_SIZE = 1500
 
 USE_CUDA_IF_AVAILABLE = True
 KERNEL_BANDWIDTH = 0.05
-SOFT_TUKEY_DEPTH_TEMP = 1
+SOFT_TUKEY_DEPTH_TEMP = 0.5
 ENCODING_DIM = 256
 HISTOGRAM_BINS = 50
 NUM_EPOCHS = 30
@@ -229,7 +229,7 @@ for NOMINAL_CLASS in range(10):
                     draw_histogram(Y_test_nominal, Y, z_test_nominal, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_temp1_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_temp2_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 
@@ -255,7 +255,7 @@ for NOMINAL_CLASS in range(10):
                     draw_histogram(Y_test_anomalous, Y, z_test_anomalous, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_temp1_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_temp2_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 
