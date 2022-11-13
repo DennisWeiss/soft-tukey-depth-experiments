@@ -7,7 +7,7 @@ from models.CIFAR10_Encoder_V4 import CIFAR10_Encoder_V4
 
 model = MNIST_Encoder_Simple()
 
-model.load_state_dict(torch.load(f'snapshots/MNIST_Encoder_9'))
+model.load_state_dict(torch.load(f'snapshots/MNIST_Encoder_temp2_0'))
 
 
 def show_filters(conv_layer):
@@ -17,4 +17,4 @@ def show_filters(conv_layer):
             plt.show()
 
 
-show_filters(model.conv_layer2)
+show_filters(model.conv_layer1)
