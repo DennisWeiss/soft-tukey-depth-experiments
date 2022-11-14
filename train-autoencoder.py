@@ -1,5 +1,6 @@
 from DataLoader import NominalCIFAR10ImageDataset, NominalMNISTImageDataset
 from models.AE_CIFAR10 import AE_CIFAR10
+from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
 from models.RAE_CIFAR10 import RAE_CIFAR10
 from models.RAE_MNIST import RAE_MNIST
 from models.AE_MNIST import AE_MNIST
@@ -12,7 +13,7 @@ from tqdm import tqdm
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'MNIST'
+DATASET_NAME = 'CIFAR10'
 # CLASS = 0
 NUM_EPOCHS = 80
 
@@ -32,7 +33,7 @@ for CLASS in range(1):
     test_data = NominalMNISTImageDataset(nominal_class=CLASS, train=False)
     test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=16, pin_memory=True)
 
-    autoencoder = AE_MNIST().to(device)
+    autoencoder = AE_CIFAR10_V4().to(device)
     # print(list(autoencoder.parameters()))
     print(len(train_dataloader))
 
@@ -100,4 +101,4 @@ for CLASS in range(1):
         # print(f'Test total loss: {total_loss.item()}')
         # print(f'Test reconstruction loss: {total_rec_loss.item()}')
 
-    torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_32_{CLASS}')
+    torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_v4_{CLASS}')
