@@ -11,13 +11,13 @@ class CIFAR10_Encoder_V5(nn.Module):
 
 
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 24, 6, stride=2),  # [batch, 12, 16, 16]
+            nn.Conv2d(3, 24, 6, stride=2, padding=2),  # [batch, 12, 16, 16]
             nn.BatchNorm2d(24, eps=1e-4, affine=False),
             nn.ReLU(),
-            nn.Conv2d(24, 12, 6, stride=2),  # [batch, 24, 8, 8]
+            nn.Conv2d(24, 12, 6, stride=2, padding=2),  # [batch, 24, 8, 8]
             nn.BatchNorm2d(12, eps=1e-4, affine=False),
             nn.ReLU(),
-            nn.Conv2d(12, 12, 6, stride=2),  # [batch, 48, 4, 4]
+            nn.Conv2d(12, 12, 6, stride=2, padding=2),  # [batch, 48, 4, 4]
             nn.BatchNorm2d(12, eps=1e-4, affine=False),
             nn.ReLU(),
             nn.Flatten(),
