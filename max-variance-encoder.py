@@ -4,6 +4,7 @@ import torch
 import matplotlib.pyplot as plt
 from DataLoader import NominalMNISTImageDataset, AnomalousMNISTImageDataset, NominalCIFAR10ImageDataset, AnomalousCIFAR10ImageDataset
 from models.CIFAR10_Encoder_V4 import CIFAR10_Encoder_V4
+from models.CIFAR10_Encoder_V5 import CIFAR10_Encoder_V5
 from models.MNIST_Encoder_Simple import MNIST_Encoder_Simple
 from models.MNIST_Encoder_DSVDD import MNIST_Encoder_DSVDD
 from models.CIFAR10_Encoder_Simple import CIFAR10_Encoder_Simple
@@ -150,7 +151,7 @@ for NOMINAL_CLASS in range(5, 6):
     test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=NOMINAL_CLASS, train=False), list(range(TEST_ANOMALOUS_SIZE)))
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=TEST_ANOMALOUS_SIZE)
 
-    encoder = CIFAR10_Encoder_V4().to(device)
+    encoder = CIFAR10_Encoder_V5().to(device)
     encoder.train()
 
     optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=3e-3)
