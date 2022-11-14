@@ -23,7 +23,7 @@ TEST_ANOMALOUS_SIZE = 1500
 USE_CUDA_IF_AVAILABLE = True
 KERNEL_BANDWIDTH = 0.05
 SOFT_TUKEY_DEPTH_TEMP = 0.5
-ENCODING_DIM = 256
+ENCODING_DIM = 128
 HISTOGRAM_BINS = 50
 NUM_EPOCHS = 30
 STD_ITERATIONS = 5
@@ -139,7 +139,7 @@ def draw_scatter_plot(X, z_params):
     X_scatter_plot.show()
 
 
-for NOMINAL_CLASS in range(10):
+for NOMINAL_CLASS in range(5, 6):
 
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True), list(range(DATA_SIZE)))
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
@@ -229,7 +229,7 @@ for NOMINAL_CLASS in range(10):
                     draw_histogram(Y_test_nominal, Y, z_test_nominal, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_temp2_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_v5_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 
@@ -255,12 +255,12 @@ for NOMINAL_CLASS in range(10):
                     draw_histogram(Y_test_anomalous, Y, z_test_anomalous, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_temp2_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_v5_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 
 
-    torch.save(encoder.state_dict(), f'./snapshots/{DATASET_NAME}_Encoder_temp2_{NOMINAL_CLASS}')
+    torch.save(encoder.state_dict(), f'./snapshots/{DATASET_NAME}_Encoder_v5_{NOMINAL_CLASS}')
 
     # for i in range(X.size(dim=0)):
     #     print(soft_tukey_depth(X[i].reshape(1, -1), X, z_params[i]))
