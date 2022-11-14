@@ -139,7 +139,7 @@ def draw_scatter_plot(X, z_params):
     X_scatter_plot.show()
 
 
-for NOMINAL_CLASS in range(10):
+for NOMINAL_CLASS in range(5, 6):
 
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True), list(range(DATA_SIZE)))
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
