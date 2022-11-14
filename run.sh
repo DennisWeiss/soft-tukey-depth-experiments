@@ -11,4 +11,4 @@
 #$ -l cuda=1   # request one GPU
 
 echo "I am a job task with ID $SGE_TASK_ID."
-python main.py  # here you perform any commands to start your program
+python3 main.py  # here you perform any commands to start your program
