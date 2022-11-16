@@ -18,7 +18,7 @@ from models.MVTecCapsule_Encoder import MVTecCapsule_Encoder
 DATASET_NAME = 'CIFAR10'
 NOMINAL_DATASET = NominalCIFAR10ImageDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10ImageDataset
-DATA_SIZE = 1024
+DATA_SIZE = 1500
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
 
@@ -26,13 +26,13 @@ TEST_ANOMALOUS_SIZE = 1000
 USE_CUDA_IF_AVAILABLE = True
 SAVE_MODEL = True
 KERNEL_BANDWIDTH = 0.05
-SOFT_TUKEY_DEPTH_TEMP = 0.1
+SOFT_TUKEY_DEPTH_TEMP = 0.2
 ENCODING_DIM = 128
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 6
+NUM_EPOCHS = 30
 STD_ITERATIONS = 3
 TEST_STD_ITERATIONS = 5
-BATCH_SIZE = 256
+BATCH_SIZE = 1500
 BATCH_SIZE_STD_COMPUTATION = 16
 
 torch.autograd.set_detect_anomaly(True)
@@ -166,7 +166,7 @@ for NOMINAL_CLASS in range(5, 6):
     encoder = CIFAR10_Encoder_V5().to(device)
     encoder.train()
 
-    optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=1e-3)
+    optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=3e-4)
 
     # z = [torch.ones(X.size(dim=1), device=device) for i in range(X.size(dim=0))]
     # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
