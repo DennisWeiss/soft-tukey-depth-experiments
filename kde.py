@@ -12,8 +12,8 @@ CLASS = 5
 
 result_path = f'results/CIFAR10_class{CLASS}_Encoder_v5/'
 
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Nominal_Encoder_v5_{CLASS}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Anomalous_Encoder_v5_{CLASS}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Nominal_Encoder_v5_batches_{CLASS}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Anomalous_Encoder_v5_batches_{CLASS}.csv'), delimiter=',')
 
 tukey_depths = []
 
