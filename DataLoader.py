@@ -8,6 +8,7 @@ from sklearn.preprocessing import StandardScaler
 
 from models.AE_CIFAR10 import AE_CIFAR10
 from models.AE_CIFAR10_V3 import AE_CIFAR10_V3
+from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
 from models.AE_MNIST import AE_MNIST
 from transform import FlattenTransform
 from models.RAE_CIFAR10 import RAE_CIFAR10
@@ -93,8 +94,8 @@ class NominalCIFAR10AutoencoderDataset(Dataset):
         self.data_latent = torch.zeros(len(self.data), 1, 512)
 
         dataloader = torch.utils.data.DataLoader(self.data)
-        autoencoder = AE_CIFAR10_V3()
-        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_V3_{nominal_class}'))
+        autoencoder = AE_CIFAR10_V4()
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_v4_compl_{nominal_class}'))
 
         for step, x in enumerate(dataloader):
             z, x_hat = autoencoder(x[0])
@@ -121,8 +122,8 @@ class AnomalousCIFAR10AutoencoderDataset(Dataset):
         self.data_latent = torch.zeros(len(self.data), 1, 512)
 
         dataloader = torch.utils.data.DataLoader(self.data)
-        autoencoder = AE_CIFAR10_V3()
-        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_V3_{nominal_class}'))
+        autoencoder = AE_CIFAR10_V4()
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_v4_compl_{nominal_class}'))
 
         for step, x in enumerate(dataloader):
             z, x_hat = autoencoder(x[0])

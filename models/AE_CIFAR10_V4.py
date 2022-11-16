@@ -12,21 +12,21 @@ class AE_CIFAR10_V4(nn.Module):
             nn.Conv2d(3, 24, 6, stride=2, padding=2),  # [batch, 12, 16, 16]
             nn.BatchNorm2d(24, eps=1e-4, affine=False),
             nn.ReLU(),
-            nn.Conv2d(24, 12, 6, stride=2, padding=2),  # [batch, 24, 8, 8]
-            nn.BatchNorm2d(12, eps=1e-4, affine=False),
+            nn.Conv2d(24, 36, 6, stride=2, padding=2),  # [batch, 24, 8, 8]
+            nn.BatchNorm2d(36, eps=1e-4, affine=False),
             nn.ReLU(),
-            nn.Conv2d(12, 12, 6, stride=2, padding=2),  # [batch, 48, 4, 4]
-            nn.BatchNorm2d(12, eps=1e-4, affine=False),
+            nn.Conv2d(36, 48, 6, stride=2, padding=2),  # [batch, 48, 4, 4]
+            nn.BatchNorm2d(48, eps=1e-4, affine=False),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(12 * 4 * 4, 128)
+            nn.Linear(48 * 4 * 4, 512)
         )
         self.decoder = nn.Sequential(
-            nn.Linear(128, 12 * 4 * 4),
-            nn.Unflatten(dim=1, unflattened_size=(12, 4, 4)),
-			nn.ConvTranspose2d(12, 12, 6, stride=2, padding=2),  # [batch, 24, 8, 8]
+            nn.Linear(512, 48 * 4 * 4),
+            nn.Unflatten(dim=1, unflattened_size=(48, 4, 4)),
+			nn.ConvTranspose2d(48, 36, 6, stride=2, padding=2),  # [batch, 24, 8, 8]
             nn.ReLU(),
-			nn.ConvTranspose2d(12, 24, 6, stride=2, padding=2),  # [batch, 12, 16, 16]
+			nn.ConvTranspose2d(36, 24, 6, stride=2, padding=2),  # [batch, 12, 16, 16]
             nn.ReLU(),
             nn.ConvTranspose2d(24, 3, 6, stride=2, padding=2),   # [batch, 3, 32, 32]
             nn.Sigmoid(),

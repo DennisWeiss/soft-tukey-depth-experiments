@@ -15,7 +15,7 @@ from tqdm import tqdm
 USE_CUDA_IF_AVAILABLE = True
 DATASET_NAME = 'CIFAR10'
 # CLASS = 0
-NUM_EPOCHS = 80
+NUM_EPOCHS = 50
 
 
 if torch.cuda.is_available():
@@ -26,12 +26,12 @@ else:
 device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_available() else 'cpu')
 print('The model will run with {}'.format(device))
 
-for CLASS in range(1):
-    train_data = NominalMNISTImageDataset(nominal_class=CLASS, train=True)
-    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=16, pin_memory=True)
+for CLASS in range(5, 6):
+    train_data = NominalCIFAR10ImageDataset(nominal_class=CLASS, train=True)
+    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=32, pin_memory=True)
 
-    test_data = NominalMNISTImageDataset(nominal_class=CLASS, train=False)
-    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=16, pin_memory=True)
+    test_data = NominalCIFAR10ImageDataset(nominal_class=CLASS, train=False)
+    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=32, pin_memory=True)
 
     autoencoder = AE_CIFAR10_V4().to(device)
     # print(list(autoencoder.parameters()))
@@ -71,34 +71,34 @@ for CLASS in range(1):
 
         autoencoder.eval()
 
-        # total_loss = torch.tensor(0)
-        # total_rec_loss = torch.tensor(0)
-        # for step, X in enumerate(train_dataloader):
-        #     X = X.to(device)
-        #     Z, X_hat = autoencoder(X)
-        #     rec_loss = get_loss_rec(X, X_hat)
-        #     total_loss = total_loss.add(rec_loss + 1e-4 * get_loss_rae(Z) + 1e-5 * get_loss_reg(autoencoder))
-        #     total_rec_loss = total_rec_loss.add(rec_loss)
-        #
-        # total_loss /= len(train_data)
-        # total_rec_loss /= len(train_data)
-        #
-        # print(f'Train total loss: {total_loss.item()}')
-        # print(f'Train reconstruction loss: {total_rec_loss.item()}')
+        total_loss = torch.tensor(0)
+        total_rec_loss = torch.tensor(0)
+        for step, X in enumerate(train_dataloader):
+            X = X.to(device)
+            Z, X_hat = autoencoder(X)
+            rec_loss = get_loss_rec(X, X_hat)
+            total_loss = total_loss.add(rec_loss + 1e-4 * get_loss_rae(Z) + 1e-5 * get_loss_reg(autoencoder))
+            total_rec_loss = total_rec_loss.add(rec_loss)
 
-        # total_loss = torch.tensor(0)
-        # total_rec_loss = torch.tensor(0)
-        # for step, X in enumerate(test_dataloader):
-        #     X = X.to(device)
-        #     Z, X_hat = autoencoder(X)
-        #     rec_loss = get_loss_rec(X, X_hat)
-        #     total_loss = total_loss.add(rec_loss + 1e-3 * get_loss_rae(Z) + 1e-4 * get_loss_reg(autoencoder))
-        #     total_rec_loss = total_rec_loss.add(rec_loss)
-        #
-        # total_loss /= len(test_data)
-        # total_rec_loss /= len(test_data)
-        #
-        # print(f'Test total loss: {total_loss.item()}')
-        # print(f'Test reconstruction loss: {total_rec_loss.item()}')
+        total_loss /= len(train_data)
+        total_rec_loss /= len(train_data)
 
-    torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_v4_{CLASS}')
+        print(f'Train total loss: {total_loss.item()}')
+        print(f'Train reconstruction loss: {total_rec_loss.item()}')
+
+        total_loss = torch.tensor(0)
+        total_rec_loss = torch.tensor(0)
+        for step, X in enumerate(test_dataloader):
+            X = X.to(device)
+            Z, X_hat = autoencoder(X)
+            rec_loss = get_loss_rec(X, X_hat)
+            total_loss = total_loss.add(rec_loss + 1e-3 * get_loss_rae(Z) + 1e-4 * get_loss_reg(autoencoder))
+            total_rec_loss = total_rec_loss.add(rec_loss)
+
+        total_loss /= len(test_data)
+        total_rec_loss /= len(test_data)
+
+        print(f'Test total loss: {total_loss.item()}')
+        print(f'Test reconstruction loss: {total_rec_loss.item()}')
+
+    torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_v4_compl_{CLASS}')
