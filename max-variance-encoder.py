@@ -18,7 +18,7 @@ from models.MVTecCapsule_Encoder import MVTecCapsule_Encoder
 DATASET_NAME = 'CIFAR10'
 NOMINAL_DATASET = NominalCIFAR10ImageDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10ImageDataset
-DATA_SIZE = 1500
+DATA_SIZE = 1024
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
 
@@ -29,10 +29,10 @@ KERNEL_BANDWIDTH = 0.05
 SOFT_TUKEY_DEPTH_TEMP = 0.2
 ENCODING_DIM = 128
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 30
+NUM_EPOCHS = 10
 STD_ITERATIONS = 3
 TEST_STD_ITERATIONS = 5
-BATCH_SIZE = 1500
+BATCH_SIZE = 256
 BATCH_SIZE_STD_COMPUTATION = 16
 
 torch.autograd.set_detect_anomaly(True)
@@ -55,11 +55,11 @@ def get_random_matrix(m, n):
 
 
 def soft_tukey_depth(x, x_, z):
-    return soft_tukey_depth_v2(x, x_, z)
-    # matmul = torch.outer(torch.ones(x_.size(dim=0), device=device), x)
-    # return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(1 / SOFT_TUKEY_DEPTH_TEMP), torch.divide(
-    #     torch.matmul(torch.subtract(x_, matmul), z),
-    #     torch.norm(z)))))
+    # return soft_tukey_depth_v2(x, x_, z)
+    matmul = torch.outer(torch.ones(x_.size(dim=0), device=device), x)
+    return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(1 / SOFT_TUKEY_DEPTH_TEMP), torch.divide(
+        torch.matmul(torch.subtract(x_, matmul), z),
+        torch.norm(z)))))
 
 
 def soft_tukey_depth_v2(x, x_, z):
