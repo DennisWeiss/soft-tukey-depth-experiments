@@ -248,7 +248,7 @@ for NOMINAL_CLASS in range(5, 6):
         soft_tukey_depths.append(_soft_tukey_depth.item() / len(train_data))
 
     writer = csv.writer(open(
-        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_v5_batches_{NOMINAL_CLASS}.csv',
+        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_v5_{NOMINAL_CLASS}.csv',
         'w'))
     writer.writerow(soft_tukey_depths)
 
@@ -280,7 +280,7 @@ for NOMINAL_CLASS in range(5, 6):
 
 
     writer = csv.writer(open(
-        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_v5_batches_{NOMINAL_CLASS}.csv',
+        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_v5_{NOMINAL_CLASS}.csv',
         'w'))
     writer.writerow(soft_tukey_depths)
 
