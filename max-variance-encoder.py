@@ -18,13 +18,13 @@ NOMINAL_DATASET = NominalCIFAR10ImageDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10ImageDataset
 DATA_SIZE = 1000
 TEST_NOMINAL_SIZE = 1000
-TEST_ANOMALOUS_SIZE = 1000
+TEST_ANOMALOUS_SIZE = 1500
 
 
 USE_CUDA_IF_AVAILABLE = True
 KERNEL_BANDWIDTH = 0.05
 SOFT_TUKEY_DEPTH_TEMP = 0.5
-ENCODING_DIM = 256
+ENCODING_DIM = 128
 HISTOGRAM_BINS = 50
 NUM_EPOCHS = 9
 STD_ITERATIONS = 3
@@ -121,7 +121,7 @@ def draw_histogram(X, X_, z_params, bins=200):
     for i in range(n):
         soft_tukey_depths[i] = soft_tukey_depth(X[i], X_, z_params[i]) / X_.size(dim=0)
     tukey_depth_histogram = plt.figure()
-    plt.hist(soft_tukey_depths[soft_tukey_depths < 0.5].detach(), bins=bins)
+    plt.hist(soft_tukey_depths.detach(), bins=bins)
     tukey_depth_histogram.show()
 
 
@@ -151,9 +151,7 @@ for NOMINAL_CLASS in range(5, 6):
     test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=NOMINAL_CLASS, train=False), list(range(TEST_ANOMALOUS_SIZE)))
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=TEST_ANOMALOUS_SIZE)
 
-    encoder = CIFAR10_Encoder_V4().to(device)
-    # encoder.load_state_dict(torch.load(f'./snapshots/{DATASET_NAME}_Encoder_v4_{NOMINAL_CLASS}'))
-
+    encoder = CIFAR10_Encoder_V5().to(device)
     encoder.train()
 
     optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=1e-3)
