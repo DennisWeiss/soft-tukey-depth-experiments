@@ -2,9 +2,14 @@ import csv
 
 import torch
 import matplotlib.pyplot as plt
-from DataLoader import NominalMNISTImageDataset, AnomalousMNISTImageDataset, NominalCIFAR10ImageDataset, AnomalousCIFAR10ImageDataset
+from DataLoader import NominalMNISTImageDataset, AnomalousMNISTImageDataset, NominalCIFAR10ImageDataset, \
+    AnomalousCIFAR10ImageDataset, NominalCIFAR10AutoencoderDataset, AnomalousCIFAR10AutoencoderDataset, \
+    NominalMNISTAutoencoderDataset, AnomalousMNISTAutoencoderDataset
+from models.CIFAR10_AE_Encoder import CIFAR10_AE_Encoder
 from models.CIFAR10_Encoder_V4 import CIFAR10_Encoder_V4
 from models.CIFAR10_Encoder_V5 import CIFAR10_Encoder_V5
+from models.CIFAR10_Encoder_V6 import CIFAR10_Encoder_V6
+from models.MNIST_AE_Encoder import MNIST_AE_Encoder
 from models.MNIST_Encoder_Simple import MNIST_Encoder_Simple
 from models.MNIST_Encoder_DSVDD import MNIST_Encoder_DSVDD
 from models.CIFAR10_Encoder_Simple import CIFAR10_Encoder_Simple
@@ -13,20 +18,21 @@ import torch.utils.data
 import numpy as np
 
 
-DATASET_NAME = 'CIFAR10'
-NOMINAL_DATASET = NominalCIFAR10ImageDataset
-ANOMALOUS_DATASET = AnomalousCIFAR10ImageDataset
+DATASET_NAME = 'CIFAR10_Autoencoder'
+NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
+ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
+RESULT_NAME_DESC = 'kl_div_1e-3'
 DATA_SIZE = 1000
 TEST_NOMINAL_SIZE = 1000
-TEST_ANOMALOUS_SIZE = 1500
+TEST_ANOMALOUS_SIZE = 1000
 
 
 USE_CUDA_IF_AVAILABLE = True
 KERNEL_BANDWIDTH = 0.05
-SOFT_TUKEY_DEPTH_TEMP = 0.5
-ENCODING_DIM = 128
+SOFT_TUKEY_DEPTH_TEMP = 0.1
+ENCODING_DIM = 256
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 9
+NUM_EPOCHS = 20
 STD_ITERATIONS = 3
 
 torch.autograd.set_detect_anomaly(True)
@@ -59,7 +65,9 @@ def get_mean_soft_tukey_depth(X, z_params):
     mean = torch.tensor(0).to(device)
     for i in range(X.size(dim=0)):
         mean = mean.add(soft_tukey_depth(X[i], X, z_params[i]))
-    return mean.divide(X.size(dim=0))
+    _mean = mean.divide(X.size(dim=0))
+    print(_mean.item())
+    return _mean
 
 
 def get_variance_soft_tukey_depth_with_mean(X, z_params, mean):
@@ -72,6 +80,21 @@ def get_variance_soft_tukey_depth_with_mean(X, z_params, mean):
 
 def get_variance_soft_tukey_depth(X, z_params):
     return get_variance_soft_tukey_depth_with_mean(X, z_params, get_mean_soft_tukey_depth(X, z_params))
+
+
+def get_kl_divergence(X, z_params, kernel_bandwidth):
+    n = X.size(dim=0)
+    kl_divergence = torch.log(torch.tensor(2))
+    soft_tukey_depths = []
+    for i in range(n):
+        soft_tukey_depths.append(soft_tukey_depth(X[i], X, z_params[i]).divide(n))
+    for x in np.arange(0, 0.5, 0.005):
+        val = torch.tensor(0)
+        for i in range(n):
+            val = val.add(torch.exp(torch.square(soft_tukey_depths[i] - x).divide(torch.tensor(-2 * kernel_bandwidth * kernel_bandwidth))))
+        # print(val.item())
+        kl_divergence = kl_divergence.subtract(torch.multiply(torch.tensor(0.01), torch.log(val.divide(n))))
+    return kl_divergence
 
 
 def get_kde_norm_soft_tukey_depth(X, z_params, bandwidth):
@@ -140,18 +163,17 @@ def draw_scatter_plot(X, z_params):
     X_scatter_plot.show()
 
 
-for NOMINAL_CLASS in range(5, 6):
-
-    train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True), list(range(DATA_SIZE)))
+for NOMINAL_CLASS in range(2, 3):
+    train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True, device=device), list(range(DATA_SIZE)))
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
 
-    test_data_nominal = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=False), list(range(TEST_NOMINAL_SIZE)))
-    test_dataloader_nominal = torch.utils.data.DataLoader(test_data_nominal, batch_size=TEST_NOMINAL_SIZE)
+    test_data_nominal = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=False, device=device), list(range(TEST_NOMINAL_SIZE)))
+    test_dataloader_nominal = torch.utils.data.DataLoader(test_data_nominal, batch_size=TEST_NOMINAL_SIZE, shuffle=True)
 
-    test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=NOMINAL_CLASS, train=False), list(range(TEST_ANOMALOUS_SIZE)))
-    test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=TEST_ANOMALOUS_SIZE)
+    test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=NOMINAL_CLASS, train=False, device=device), list(range(TEST_ANOMALOUS_SIZE)))
+    test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=TEST_ANOMALOUS_SIZE, shuffle=True)
 
-    encoder = CIFAR10_Encoder_V5().to(device)
+    encoder = CIFAR10_AE_Encoder().to(device)
     encoder.train()
 
     optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=1e-3)
@@ -183,16 +205,20 @@ for NOMINAL_CLASS in range(5, 6):
             optimizer_z.zero_grad()
 
 
-            var = get_variance_soft_tukey_depth(Y, z_params)
-            print(f'Variance: {var.item()}')
+            # var = get_variance_soft_tukey_depth(Y, z_params)
+            # print(f'Variance: {var.item()}')
             print(f'Total norm: {torch.linalg.norm(Y, dim=1).sum().item()}')
             print(f'Total point value: {Y.sum(dim=0).sum()}')
             # ((0 * -var).add(1e+4 * (torch.square(torch.linalg.norm(Y, dim=1).sum().subtract(DATA_SIZE)))).add(1e+3 * torch.square(Y.sum(dim=0)).sum())).backward()
-            (-var).backward()
+            # (-var).backward()
 
             # moment_loss = get_moment_loss(Y, z_params, 3)
             # print(f'Moment loss: {moment_loss.item()}')
             # moment_loss.backward()
+
+            kl_divergence = get_kl_divergence(Y, z_params, 0.1)
+            print(f'KL divergence: {kl_divergence.item()}')
+            kl_divergence.backward()
 
             # inverse_sum_loss = get_inverse_sum_soft_tukey_depth(Y, z_params)
             # (inverse_sum_loss).backward()
@@ -232,7 +258,7 @@ for NOMINAL_CLASS in range(5, 6):
                     draw_histogram(Y_test_nominal, Y, z_test_nominal, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_v4_1000_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 
@@ -259,12 +285,12 @@ for NOMINAL_CLASS in range(5, 6):
                     draw_histogram(Y_test_anomalous, Y, z_test_anomalous, bins=HISTOGRAM_BINS)
 
                     writer = csv.writer(open(
-                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_v4_1000_{NOMINAL_CLASS}.csv',
+                        f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}.csv',
                         'w'))
                     writer.writerow(soft_tukey_depths)
 
 
-    torch.save(encoder.state_dict(), f'./snapshots/{DATASET_NAME}_Encoder_v4_14epochs_{NOMINAL_CLASS}')
+    torch.save(encoder.state_dict(), f'./snapshots/{DATASET_NAME}_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}')
 
     # for i in range(X.size(dim=0)):
     #     print(soft_tukey_depth(X[i].reshape(1, -1), X, z_params[i]))

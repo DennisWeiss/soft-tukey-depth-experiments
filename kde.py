@@ -8,12 +8,13 @@ import sys
 import os
 
 
-CLASS = 5
+CLASS = 2
+RESULT_NAME_DESC = 'kl_div_3e-3'
 
-result_path = f'results/CIFAR10_class{CLASS}_Encoder_v4/'
+result_path = f'results/CIFAR10_class{CLASS}_Autoencoder_{RESULT_NAME_DESC}/'
 
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Nominal_Encoder_v4_1000_{CLASS}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Anomalous_Encoder_v4_1000_{CLASS}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_Encoder_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_Encoder_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
 
 tukey_depths = []
 

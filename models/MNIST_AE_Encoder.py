@@ -3,14 +3,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class CIFAR10_AE_Encoder(nn.Module):
+class MNIST_AE_Encoder(nn.Module):
     def __init__(self):
-        super(CIFAR10_AE_Encoder, self).__init__()
+        super(MNIST_AE_Encoder, self).__init__()
 
         self.encoder = nn.Sequential(
-            nn.Linear(512, 256),
+            nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Linear(256, 256)
+            nn.Linear(64, 32)
         )
 
     def forward(self, x):

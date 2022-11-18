@@ -1,6 +1,8 @@
-from DataLoader import NominalCIFAR10ImageDataset, NominalMNISTImageDataset
+from DataLoader import NominalCIFAR10ImageDataset, NominalMNISTImageDataset, NominalMVTecCapsuleDataset
 from models.AE_CIFAR10 import AE_CIFAR10
 from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
+from models.AE_MNIST_V2 import AE_MNIST_V2
+from models.MVTec_AE import MVTec_AE
 from models.RAE_CIFAR10 import RAE_CIFAR10
 from models.RAE_MNIST import RAE_MNIST
 from models.AE_MNIST import AE_MNIST
@@ -13,9 +15,9 @@ from tqdm import tqdm
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'CIFAR10'
+DATASET_NAME = 'MVTec_Capsule'
 # CLASS = 0
-NUM_EPOCHS = 50
+NUM_EPOCHS = 20
 
 
 if torch.cuda.is_available():
@@ -26,14 +28,14 @@ else:
 device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_available() else 'cpu')
 print('The model will run with {}'.format(device))
 
-for CLASS in range(5, 6):
-    train_data = NominalCIFAR10ImageDataset(nominal_class=CLASS, train=True)
+for CLASS in range(0, 1):
+    train_data = NominalMVTecCapsuleDataset(train=True)
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=32, pin_memory=True)
 
-    test_data = NominalCIFAR10ImageDataset(nominal_class=CLASS, train=False)
+    test_data = NominalMVTecCapsuleDataset(train=False)
     test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=32, pin_memory=True)
 
-    autoencoder = AE_CIFAR10_V4().to(device)
+    autoencoder = MVTec_AE().to(device)
     # print(list(autoencoder.parameters()))
     print(len(train_dataloader))
 
@@ -49,7 +51,7 @@ for CLASS in range(5, 6):
         return sum(parameter.square().sum() for parameter in model.parameters())
 
 
-    optimizer = torch.optim.Adam(autoencoder.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(autoencoder.parameters(), lr=1e-2)
 
     for epoch in range(NUM_EPOCHS):
         autoencoder.train()
@@ -63,7 +65,7 @@ for CLASS in range(5, 6):
                 plt.imshow(np.transpose(X_hat[0].cpu().detach().numpy(), (1, 2, 0)))
                 plt.show()
 
-            total_loss = get_loss_rec(X, X_hat) + 1e-4 * get_loss_rae(Z) + 1e-5 * get_loss_reg(autoencoder)
+            total_loss = get_loss_rec(X, X_hat) + 1e-3 * get_loss_rae(Z) + 1e-4 * get_loss_reg(autoencoder)
 
             optimizer.zero_grad()
             total_loss.backward()
@@ -101,4 +103,4 @@ for CLASS in range(5, 6):
         print(f'Test total loss: {total_loss.item()}')
         print(f'Test reconstruction loss: {total_rec_loss.item()}')
 
-    torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_v4_compl_{CLASS}')
+    torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_V2_{CLASS}')

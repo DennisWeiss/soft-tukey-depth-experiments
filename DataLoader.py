@@ -10,6 +10,7 @@ from models.AE_CIFAR10 import AE_CIFAR10
 from models.AE_CIFAR10_V3 import AE_CIFAR10_V3
 from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
 from models.AE_MNIST import AE_MNIST
+from models.AE_MNIST_V2 import AE_MNIST_V2
 from transform import FlattenTransform
 from models.RAE_CIFAR10 import RAE_CIFAR10
 from models.RAE_MNIST import RAE_MNIST
@@ -81,7 +82,7 @@ class AnomalousCIFAR10ImageDataset(Dataset):
 
 
 class NominalCIFAR10AutoencoderDataset(Dataset):
-    def __init__(self, nominal_class, train=True):
+    def __init__(self, nominal_class, train=True, device=None):
         self.data = torchvision.datasets.CIFAR10(
             'datasets',
             train=train,
@@ -94,10 +95,14 @@ class NominalCIFAR10AutoencoderDataset(Dataset):
         self.data_latent = torch.zeros(len(self.data), 1, 512)
 
         dataloader = torch.utils.data.DataLoader(self.data)
-        autoencoder = AE_CIFAR10_V4()
-        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_v4_compl_{nominal_class}'))
+        autoencoder = AE_CIFAR10_V3()
+        if device is not None:
+            autoencoder = autoencoder.to(device)
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_V3_{nominal_class}'))
 
         for step, x in enumerate(dataloader):
+            if device is not None:
+                x[0] = x[0].to(device)
             z, x_hat = autoencoder(x[0])
             self.data_latent[step][0] = z.detach()
 
@@ -109,7 +114,7 @@ class NominalCIFAR10AutoencoderDataset(Dataset):
 
 
 class AnomalousCIFAR10AutoencoderDataset(Dataset):
-    def __init__(self, nominal_class, train=True):
+    def __init__(self, nominal_class, train=True, device=None):
         self.data = torchvision.datasets.CIFAR10(
             'datasets',
             train=train,
@@ -122,10 +127,14 @@ class AnomalousCIFAR10AutoencoderDataset(Dataset):
         self.data_latent = torch.zeros(len(self.data), 1, 512)
 
         dataloader = torch.utils.data.DataLoader(self.data)
-        autoencoder = AE_CIFAR10_V4()
-        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_v4_compl_{nominal_class}'))
+        autoencoder = AE_CIFAR10_V3()
+        if device is not None:
+            autoencoder = autoencoder.to(device)
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_V3_{nominal_class}'))
 
         for step, x in enumerate(dataloader):
+            if device is not None:
+                x[0] = x[0].to(device)
             z, x_hat = autoencoder(x[0])
             self.data_latent[step][0] = z.detach()
 
@@ -349,7 +358,7 @@ class AnomalousMNISTImageDataset(Dataset):
 
 
 class NominalMNISTAutoencoderDataset(Dataset):
-    def __init__(self, nominal_class, train=True):
+    def __init__(self, nominal_class, train=True, device=None):
         self.data = torchvision.datasets.MNIST(
             'datasets',
             train=train,
@@ -363,14 +372,18 @@ class NominalMNISTAutoencoderDataset(Dataset):
                                                            min_max_mnist[nominal_class][0]])])
         )
 
-        self.data_latent = torch.zeros(len(self.data), 1, 32)
+        self.data_latent = torch.zeros(len(self.data), 1, 64)
 
         dataloader = torch.utils.data.DataLoader(self.data)
-        autoencoder = AE_MNIST()
-        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_32_{nominal_class}'))
+        autoencoder = AE_MNIST_V2()
+        if device is not None:
+            autoencoder = autoencoder.to(device)
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_V2_{nominal_class}'))
         autoencoder.eval()
 
         for step, x in enumerate(dataloader):
+            if device is not None:
+                x[0] = x[0].to(device)
             z, x_hat = autoencoder(x[0])
             self.data_latent[step][0] = z.detach()
 
@@ -384,7 +397,7 @@ class NominalMNISTAutoencoderDataset(Dataset):
 
 
 class AnomalousMNISTAutoencoderDataset(Dataset):
-    def __init__(self, nominal_class, train=True):
+    def __init__(self, nominal_class, train=True, device=None):
         self.data = torchvision.datasets.MNIST(
             'datasets',
             train=train,
@@ -398,14 +411,18 @@ class AnomalousMNISTAutoencoderDataset(Dataset):
                                                            min_max_mnist[nominal_class][0]])])
         )
 
-        self.data_latent = torch.zeros(len(self.data), 1, 32)
+        self.data_latent = torch.zeros(len(self.data), 1, 64)
 
         dataloader = torch.utils.data.DataLoader(self.data)
-        autoencoder = AE_MNIST()
-        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_32_{nominal_class}'))
+        autoencoder = AE_MNIST_V2()
+        if device is not None:
+            autoencoder = autoencoder.to(device)
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_V2_{nominal_class}'))
         autoencoder.eval()
 
         for step, x in enumerate(dataloader):
+            if device is not None:
+                x[0] = x[0].to(device)
             z, x_hat = autoencoder(x[0])
             self.data_latent[step][0] = z.detach()
 
@@ -419,7 +436,7 @@ class AnomalousMNISTAutoencoderDataset(Dataset):
 
 
 class NominalMNISTAutoencoderAllDataset(Dataset):
-    def __init__(self, nominal_class, train=True):
+    def __init__(self, nominal_class, train=True, device=None):
         self.data = torchvision.datasets.MNIST(
             'datasets',
             train=train,
@@ -433,14 +450,18 @@ class NominalMNISTAutoencoderAllDataset(Dataset):
                                                            min_max_mnist[nominal_class][0]])])
         )
 
-        self.data_latent = torch.zeros(len(self.data), 1, 32)
+        self.data_latent = torch.zeros(len(self.data), 1, 64)
 
         dataloader = torch.utils.data.DataLoader(self.data)
         autoencoder = AE_MNIST()
+        if device is not None:
+            autoencoder = autoencoder.to(device)
         autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_32_all'))
         autoencoder.eval()
 
         for step, x in enumerate(dataloader):
+            if device is not None:
+                x[0] = x[0].to(device)
             z, x_hat = autoencoder(x[0])
             self.data_latent[step][0] = z.detach()
 
@@ -454,7 +475,7 @@ class NominalMNISTAutoencoderAllDataset(Dataset):
 
 
 class AnomalousMNISTAutoencoderAllDataset(Dataset):
-    def __init__(self, nominal_class, train=True):
+    def __init__(self, nominal_class, train=True, device=None):
         self.data = torchvision.datasets.MNIST(
             'datasets',
             train=train,
@@ -468,14 +489,19 @@ class AnomalousMNISTAutoencoderAllDataset(Dataset):
                                                            min_max_mnist[nominal_class][0]])])
         )
 
-        self.data_latent = torch.zeros(len(self.data), 1, 32)
+        self.data_latent = torch.zeros(len(self.data), 1, 64)
+        self.device = device
 
         dataloader = torch.utils.data.DataLoader(self.data)
         autoencoder = AE_MNIST()
+        if device is not None:
+            autoencoder = autoencoder.to(device)
         autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_32_all'))
         autoencoder.eval()
 
         for step, x in enumerate(dataloader):
+            if self.device is not None:
+                x[0] = x[0].to(self.device)
             z, x_hat = autoencoder(x[0])
             self.data_latent[step][0] = z.detach()
 
