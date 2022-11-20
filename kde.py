@@ -8,8 +8,8 @@ import sys
 import os
 
 
-CLASS = 2
-RESULT_NAME_DESC = 'kl_div_3e-3'
+CLASS = 9
+RESULT_NAME_DESC = 'kl_div_weibull_3e-3_bw0.1_wd1e-1'
 
 result_path = f'results/CIFAR10_class{CLASS}_Autoencoder_{RESULT_NAME_DESC}/'
 

@@ -1,4 +1,4 @@
-from DataLoader import NominalCIFAR10ImageDataset, NominalMNISTImageDataset, NominalMVTecCapsuleDataset
+from DataLoader import NominalCIFAR10ImageDataset, NominalMNISTImageDataset, NominalMVTecCapsuleImageDataset
 from models.AE_CIFAR10 import AE_CIFAR10
 from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
 from models.AE_MNIST_V2 import AE_MNIST_V2
@@ -29,18 +29,18 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 for CLASS in range(0, 1):
-    train_data = NominalMVTecCapsuleDataset(train=True)
+    train_data = NominalMVTecCapsuleImageDataset(train=True)
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=32, pin_memory=True)
 
-    test_data = NominalMVTecCapsuleDataset(train=False)
+    test_data = NominalMVTecCapsuleImageDataset(train=False)
     test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=32, pin_memory=True)
 
     autoencoder = MVTec_AE().to(device)
     # print(list(autoencoder.parameters()))
     print(len(train_dataloader))
 
-    def get_loss_rec(x, x_hat):
-        return ((x - x_hat).square()).sum(axis=(2, 3)).mean()
+    def  get_loss_rec(x, x_hat):
+        return ((x - x_hat).square()).mean()
 
 
     def get_loss_rae(z):
@@ -51,7 +51,7 @@ for CLASS in range(0, 1):
         return sum(parameter.square().sum() for parameter in model.parameters())
 
 
-    optimizer = torch.optim.Adam(autoencoder.parameters(), lr=1e-2)
+    optimizer = torch.optim.Adam(autoencoder.parameters(), lr=1e-1)
 
     for epoch in range(NUM_EPOCHS):
         autoencoder.train()
@@ -94,7 +94,7 @@ for CLASS in range(0, 1):
             X = X.to(device)
             Z, X_hat = autoencoder(X)
             rec_loss = get_loss_rec(X, X_hat)
-            total_loss = total_loss.add(rec_loss + 1e-3 * get_loss_rae(Z) + 1e-4 * get_loss_reg(autoencoder))
+            total_loss = total_loss.add(rec_loss + 1e-4 * get_loss_rae(Z) + 1e-5 * get_loss_reg(autoencoder))
             total_rec_loss = total_rec_loss.add(rec_loss)
 
         total_loss /= len(test_data)

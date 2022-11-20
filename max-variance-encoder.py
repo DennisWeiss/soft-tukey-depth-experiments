@@ -16,23 +16,24 @@ from models.CIFAR10_Encoder_Simple import CIFAR10_Encoder_Simple
 from models.CIFAR10_Encoder_V3 import CIFAR10_Encoder_V3
 import torch.utils.data
 import numpy as np
+import scipy as sp
 
 
 DATASET_NAME = 'CIFAR10_Autoencoder'
 NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
-RESULT_NAME_DESC = 'kl_div_1e-3'
-DATA_SIZE = 1000
+RESULT_NAME_DESC = 'kl_div_weibull_3e-3_bw0.1_wd1e-1'
+DATA_SIZE = 2000
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
 
 
 USE_CUDA_IF_AVAILABLE = True
-KERNEL_BANDWIDTH = 0.05
+KERNEL_BANDWIDTH = 0.1
 SOFT_TUKEY_DEPTH_TEMP = 0.1
 ENCODING_DIM = 256
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 20
+NUM_EPOCHS = 12
 STD_ITERATIONS = 3
 
 torch.autograd.set_detect_anomaly(True)
@@ -82,7 +83,7 @@ def get_variance_soft_tukey_depth(X, z_params):
     return get_variance_soft_tukey_depth_with_mean(X, z_params, get_mean_soft_tukey_depth(X, z_params))
 
 
-def get_kl_divergence(X, z_params, kernel_bandwidth):
+def get_kl_divergence_of_kde_to_uniform_dist(X, z_params, kernel_bandwidth):
     n = X.size(dim=0)
     kl_divergence = torch.log(torch.tensor(2))
     soft_tukey_depths = []
@@ -94,6 +95,22 @@ def get_kl_divergence(X, z_params, kernel_bandwidth):
             val = val.add(torch.exp(torch.square(soft_tukey_depths[i] - x).divide(torch.tensor(-2 * kernel_bandwidth * kernel_bandwidth))))
         # print(val.item())
         kl_divergence = kl_divergence.subtract(torch.multiply(torch.tensor(0.01), torch.log(val.divide(n))))
+    return kl_divergence
+
+
+def get_kl_divergence_of_kde(X, z_params, target_dist, kernel_bandwidth):
+    n = X.size(dim=0)
+    kl_divergence = torch.tensor(0)
+    soft_tukey_depths = []
+    for i in range(n):
+        soft_tukey_depths.append(soft_tukey_depth(X[i], X, z_params[i]).divide(n))
+    for x in np.arange(0, 0.5, 0.005):
+        _sum = torch.tensor(0)
+        for i in range(n):
+            _sum = _sum.add(torch.exp(torch.square(soft_tukey_depths[i] - x).divide(torch.tensor(-2 * kernel_bandwidth * kernel_bandwidth))))
+
+        target_val = target_dist(x) + 1e-2
+        kl_divergence = kl_divergence.subtract(torch.tensor(0.005).multiply(torch.tensor(target_val)).multiply(torch.log(_sum.divide(torch.tensor(n * target_val)))))
     return kl_divergence
 
 
@@ -142,10 +159,17 @@ def draw_histogram(X, X_, z_params, bins=200):
     n = X.size(dim=0)
     soft_tukey_depths = torch.zeros(n)
     for i in range(n):
-        soft_tukey_depths[i] = soft_tukey_depth(X[i], X_, z_params[i]) / X_.size(dim=0)
+        soft_tukey_depths[i] = soft_tukey_depth(X[i], X_, z_params[i]).detach() / X_.size(dim=0)
     tukey_depth_histogram = plt.figure()
     plt.hist(soft_tukey_depths.detach(), bins=bins)
     tukey_depth_histogram.show()
+
+    kde_0 = sp.stats.gaussian_kde(soft_tukey_depths, bw_method=KERNEL_BANDWIDTH)
+    x = np.arange(0, 0.5, 1e-5)
+    y0 = kde_0(x)
+    kde_fig = plt.figure()
+    plt.plot(x, y0)
+    kde_fig.show()
 
 
 def draw_scatter_plot(X, z_params):
@@ -163,7 +187,19 @@ def draw_scatter_plot(X, z_params):
     X_scatter_plot.show()
 
 
-for NOMINAL_CLASS in range(2, 3):
+def weibull(_lambda, k):
+    def f(x):
+        return k / _lambda * ((x / _lambda) ** (k-1)) * np.exp(-((x / _lambda) ** k))
+    return f
+
+
+def uniform():
+    def f(x):
+        return 2
+    return f
+
+
+for NOMINAL_CLASS in range(9, 10):
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True, device=device), list(range(DATA_SIZE)))
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
 
@@ -176,7 +212,7 @@ for NOMINAL_CLASS in range(2, 3):
     encoder = CIFAR10_AE_Encoder().to(device)
     encoder.train()
 
-    optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=1e-3)
+    optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=3e-3, weight_decay=1e-1)
 
     # z = [torch.ones(X.size(dim=1), device=device) for i in range(X.size(dim=0))]
     # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
@@ -216,7 +252,7 @@ for NOMINAL_CLASS in range(2, 3):
             # print(f'Moment loss: {moment_loss.item()}')
             # moment_loss.backward()
 
-            kl_divergence = get_kl_divergence(Y, z_params, 0.1)
+            kl_divergence = get_kl_divergence_of_kde(Y, z_params, weibull(0.25, 1.7), KERNEL_BANDWIDTH)
             print(f'KL divergence: {kl_divergence.item()}')
             kl_divergence.backward()
 

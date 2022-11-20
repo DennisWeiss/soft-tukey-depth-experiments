@@ -514,7 +514,7 @@ class AnomalousMNISTAutoencoderAllDataset(Dataset):
         return len(self.indices)
 
 
-class NominalMVTecCapsuleDataset(Dataset):
+class NominalMVTecCapsuleImageDataset(Dataset):
     def __init__(self, train=True):
         self.path = 'datasets/mvtec/capsule'
         self.train = train
@@ -529,7 +529,7 @@ class NominalMVTecCapsuleDataset(Dataset):
         return self.transform(image)
 
 
-class AnomalousMVTecCapsuleDataset(Dataset):
+class AnomalousMVTecCapsuleImageDataset(Dataset):
     def __init__(self):
         self.path = 'datasets/mvtec/capsule'
         self.samples = {
@@ -551,6 +551,51 @@ class AnomalousMVTecCapsuleDataset(Dataset):
                 return self.transform(image)
             idx -= self.samples[type]
 
+
+class NominalMVTecCapsuleDataset(Dataset):
+    def __init__(self):
+        self.path = 'datasets/mvtec/capsule'
+        self.samples = {
+            'crack': 23,
+            'faulty_imprint': 22,
+            'poke': 21,
+            'scratch': 23,
+            'squeeze': 20
+        }
+        self.transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor(), torchvision.transforms.Resize((250, 250))])
+
+    def __len__(self):
+        return sum([self.samples[type] for type in self.samples.keys()])
+
+    def __getitem__(self, idx):
+        for type in self.samples.keys():
+            if idx < self.samples[type]:
+                image = torchvision.io.read_image(f'{self.path}/test/{type}/{idx:03d}.png') / 255
+                return self.transform(image)
+            idx -= self.samples[type]
+
+
+class AnomalousMVTecCapsuleDataset(Dataset):
+    def __init__(self):
+        self.path = 'datasets/mvtec/capsule'
+        self.samples = {
+            'crack': 23,
+            'faulty_imprint': 22,
+            'poke': 21,
+            'scratch': 23,
+            'squeeze': 20
+        }
+        self.transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor(), torchvision.transforms.Resize((250, 250))])
+
+    def __len__(self):
+        return sum([self.samples[type] for type in self.samples.keys()])
+
+    def __getitem__(self, idx):
+        for type in self.samples.keys():
+            if idx < self.samples[type]:
+                image = torchvision.io.read_image(f'{self.path}/test/{type}/{idx:03d}.png') / 255
+                return self.transform(image)
+            idx -= self.samples[type]
 
 
 class ToyDataset(Dataset):

@@ -34,7 +34,7 @@ def soft_tukey_depth(x, x_, z):
 
 
 X = torch.tensor(get_random_matrix(DATA_SIZE, 2), requires_grad=True)
-optimizer_X = torch.optim.SGD([X], lr=3e+2)
+optimizer_X = torch.optim.SGD([X], lr=1e-1)
 
 # z = [torch.ones(X.size(dim=1), device=device) for i in range(X.size(dim=0))]
 # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
@@ -63,6 +63,21 @@ def get_variance_soft_tukey_depth(X, z_params):
     for i in range(n):
         var = var.add(torch.square(soft_tukey_depth(X[i].reshape(1, -1), X, z_params[i]).divide(n).subtract(mean)))
     return var.divide(n - 1)
+
+
+def get_kl_divergence(X, z_params, kernel_bandwidth):
+    n = X.size(dim=0)
+    kl_divergence = torch.log(torch.tensor(2))
+    soft_tukey_depths = []
+    for i in range(n):
+        soft_tukey_depths.append(soft_tukey_depth(X[i].reshape(1, -1), X, z_params[i]).divide(n))
+    for x in np.arange(0, 0.5, 0.005):
+        val = torch.tensor(0)
+        for i in range(n):
+            val = val.add(torch.exp(torch.square(soft_tukey_depths[i] - x).divide(torch.tensor(-2 * kernel_bandwidth * kernel_bandwidth))))
+        # print(val.item())
+        kl_divergence = kl_divergence.subtract(torch.multiply(torch.tensor(0.01), torch.log(val.divide(n))))
+    return kl_divergence
 
 
 def get_kde_norm_soft_tukey_depth(X, z_params, bandwidth):
@@ -153,27 +168,31 @@ for i in range(50):
     # kde_norm = get_kde_norm_soft_tukey_depth(X, z_params, KERNEL_BANDWIDTH)
     # (-kde_norm).backward()
 
-    moment_loss = get_moment_loss(X, z_params, 6)
-    moment_loss.backward()
+    # moment_loss = get_moment_loss(X, z_params, 6)
+    # moment_loss.backward()
 
     # inverse_sum_loss = get_inverse_sum_soft_tukey_depth(X, z_params)
     # (-inverse_sum_loss).backward()
 
+    kl_divergence = get_kl_divergence(X, z_params, 0.01)
+    print(f'KL divergence is: {kl_divergence}')
+    draw_histogram(X, z_params)
+    kl_divergence.backward()
+
     optimizer_X.step()
 
-    print(X)
     for j in range(X.size(dim=0)):
-        optimizer_z.zero_grad()
-        soft_tukey_depth(X[j].reshape(1, -1), X, z_params[j]).backward()
-        optimizer_z.step()
-        print(z_params[j])
+        for k in range(5):
+            optimizer_z.zero_grad()
+            soft_tukey_depth(X[j].reshape(1, -1), X, z_params[j]).backward()
+            optimizer_z.step()
 
     if i % 3 == 0:
         draw_scatter_plot(X, z_params, False)
 
 
-for i in range(X.size(dim=0)):
-    print(soft_tukey_depth(X[i].reshape(1, -1), X, z_params[i]))
+# for i in range(X.size(dim=0)):
+#     print(soft_tukey_depth(X[i].reshape(1, -1), X, z_params[i]))
 
 print('Variance')
 print(get_variance_soft_tukey_depth(X, z_params))
@@ -186,6 +205,9 @@ print(get_kde_norm_soft_tukey_depth(X, z_params, KERNEL_BANDWIDTH))
 
 print('Moment Loss')
 print(get_moment_loss(X, z_params, 6))
+
+print('KL Divergence')
+print(get_kl_divergence(X, z_params, 0.01))
 
 for i in range(6):
     print(f'Moment {i+1} is {get_kth_moment_soft_tukey_depth(X, z_params, i+1)}')
