@@ -18,11 +18,12 @@ class MVTec_AE(nn.Module):
             nn.BatchNorm2d(48, eps=1e-4, affine=False),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(48 * 7 * 7, 64)
+            nn.Linear(48 * 7 * 7, 128)
         )
 
         self.decoder =  nn.Sequential(
-            nn.Linear(64, 48 * 7 * 7),
+            nn.Linear(128, 48 * 7 * 7),
+            nn.ReLU(),
             nn.Unflatten(dim=1, unflattened_size=(48, 7, 7)),
             nn.ConvTranspose2d(48, 24, 4, stride=3),
             nn.BatchNorm2d(24, eps=1e-4, affine=False),
