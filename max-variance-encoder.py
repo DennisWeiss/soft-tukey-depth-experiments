@@ -19,10 +19,10 @@ import numpy as np
 import scipy as sp
 
 
-DATASET_NAME = 'MNIST_Autoencoder'
-NOMINAL_DATASET = NominalMNISTAutoencoderDataset
-ANOMALOUS_DATASET = AnomalousMNISTAutoencoderDataset
-RESULT_NAME_DESC = 'kl_div_uniform_500'
+DATASET_NAME = 'CIFAR10_Autoencoder'
+NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
+ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
+RESULT_NAME_DESC = 'kl_div_uniform_1000'
 DATA_SIZE = 1000
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
@@ -199,7 +199,7 @@ def uniform():
     return f
 
 
-for NOMINAL_CLASS in range(2, 3):
+for NOMINAL_CLASS in range(1, 10):
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True, device=device), list(range(DATA_SIZE)))
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
 
@@ -209,7 +209,7 @@ for NOMINAL_CLASS in range(2, 3):
     test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=NOMINAL_CLASS, train=False, device=device), list(range(TEST_ANOMALOUS_SIZE)))
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=TEST_ANOMALOUS_SIZE, shuffle=True)
 
-    encoder = MNIST_AE_Encoder().to(device)
+    encoder = CIFAR10_AE_Encoder().to(device)
     encoder.train()
 
     optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=3e-3, weight_decay=0)
