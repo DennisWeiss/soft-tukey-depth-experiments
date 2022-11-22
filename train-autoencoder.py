@@ -1,6 +1,8 @@
 from DataLoader import NominalCIFAR10ImageDataset, NominalMNISTImageDataset, NominalMVTecCapsuleImageDataset
 from models.AE_CIFAR10 import AE_CIFAR10
+from models.AE_CIFAR10_32 import AE_CIFAR10_32
 from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
+from models.AE_MNIST_32 import AE_MNIST_32
 from models.AE_MNIST_V2 import AE_MNIST_V2
 from models.AE_MNIST_V3 import AE_MNIST_V3
 from models.MVTec_AE import MVTec_AE
@@ -16,7 +18,7 @@ from tqdm import tqdm
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'MNIST'
+DATASET_NAME = 'CIFAR10'
 # CLASS = 0
 NUM_EPOCHS = 50
 
@@ -30,13 +32,13 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 for CLASS in range(0, 10):
-    train_data = NominalMVTecCapsuleImageDataset(train=True)
+    train_data = NominalCIFAR10ImageDataset(nominal_class=CLASS, train=True)
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=32, pin_memory=True)
 
-    test_data = NominalMVTecCapsuleImageDataset(train=False)
+    test_data = NominalCIFAR10ImageDataset(nominal_class=CLASS, train=False)
     test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=32, pin_memory=True)
 
-    autoencoder = MVTec_AE().to(device)
+    autoencoder = AE_CIFAR10_32().to(device)
     # print(list(autoencoder.parameters()))
     print(len(train_dataloader))
 
@@ -52,7 +54,7 @@ for CLASS in range(0, 10):
         return sum(parameter.square().mean() for parameter in model.parameters())
 
 
-    optimizer = torch.optim.Adam(autoencoder.parameters(), lr=1e-2)
+    optimizer = torch.optim.Adam(autoencoder.parameters(), lr=3e-3)
 
     for epoch in range(NUM_EPOCHS):
         autoencoder.train()
@@ -104,4 +106,4 @@ for CLASS in range(0, 10):
         print(f'Test total loss: {total_loss.item()}')
         print(f'Test reconstruction loss: {total_rec_loss.item()}')
 
-    torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_V3_{CLASS}')
+    torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_32_{CLASS}')

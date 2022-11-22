@@ -19,9 +19,9 @@ import numpy as np
 import scipy as sp
 
 
-DATASET_NAME = 'CIFAR10_Autoencoder'
-NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
-ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
+DATASET_NAME = 'MNIST_Autoencoder'
+NOMINAL_DATASET = NominalMNISTAutoencoderDataset
+ANOMALOUS_DATASET = AnomalousMNISTAutoencoderDataset
 RESULT_NAME_DESC = 'kl_div_uniform_1000'
 DATA_SIZE = 1000
 TEST_NOMINAL_SIZE = 1000
@@ -30,7 +30,7 @@ TEST_ANOMALOUS_SIZE = 1000
 
 USE_CUDA_IF_AVAILABLE = True
 KERNEL_BANDWIDTH = 0.1
-SOFT_TUKEY_DEPTH_TEMP = 0.2
+SOFT_TUKEY_DEPTH_TEMP = 0.1
 ENCODING_DIM = 64
 HISTOGRAM_BINS = 50
 NUM_EPOCHS = 10
@@ -104,13 +104,13 @@ def get_kl_divergence_of_kde(X, z_params, target_dist, kernel_bandwidth):
     soft_tukey_depths = []
     for i in range(n):
         soft_tukey_depths.append(soft_tukey_depth(X[i], X, z_params[i]).divide(n))
-    for x in np.arange(0, 0.5, 0.005):
+    for x in np.arange(0, 0.5, 0.01):
         _sum = torch.tensor(0)
         for i in range(n):
             _sum = _sum.add(torch.exp(torch.square(soft_tukey_depths[i] - x).divide(torch.tensor(-2 * kernel_bandwidth * kernel_bandwidth))))
 
         target_val = target_dist(x) + 1e-2
-        kl_divergence = kl_divergence.subtract(torch.tensor(0.005).multiply(torch.tensor(target_val)).multiply(torch.log(_sum.divide(torch.tensor(n * target_val)))))
+        kl_divergence = kl_divergence.subtract(torch.tensor(0.01).multiply(torch.tensor(target_val)).multiply(torch.log(_sum.divide(torch.tensor(n * target_val)))))
     return kl_divergence
 
 
@@ -199,7 +199,7 @@ def uniform():
     return f
 
 
-for NOMINAL_CLASS in range(1, 10):
+for NOMINAL_CLASS in range(1, 2):
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True, device=device), list(range(DATA_SIZE)))
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
 
@@ -209,10 +209,10 @@ for NOMINAL_CLASS in range(1, 10):
     test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=NOMINAL_CLASS, train=False, device=device), list(range(TEST_ANOMALOUS_SIZE)))
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=TEST_ANOMALOUS_SIZE, shuffle=True)
 
-    encoder = CIFAR10_AE_Encoder().to(device)
+    encoder = MNIST_AE_Encoder().to(device)
     encoder.train()
 
-    optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=3e-3, weight_decay=0)
+    optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=3e-3)
 
     # z = [torch.ones(X.size(dim=1), device=device) for i in range(X.size(dim=0))]
     # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
@@ -230,7 +230,6 @@ for NOMINAL_CLASS in range(1, 10):
 
             for j in range(n):
                 for k in range(STD_ITERATIONS):
-                    optimizer_encoder.zero_grad()
                     optimizer_z.zero_grad()
                     _soft_tukey_depth = soft_tukey_depth(Y[j].detach(), Y.detach(), z_params[j])
                     _soft_tukey_depth.backward()
@@ -238,13 +237,12 @@ for NOMINAL_CLASS in range(1, 10):
                     # print(j, z_params[j])
 
             optimizer_encoder.zero_grad()
-            optimizer_z.zero_grad()
-
 
             # var = get_variance_soft_tukey_depth(Y, z_params)
             # print(f'Variance: {var.item()}')
-            print(f'Total norm: {torch.linalg.norm(Y, dim=1).sum().item()}')
-            print(f'Total point value: {Y.sum(dim=0).sum()}')
+            mean_norm = torch.linalg.norm(Y, dim=1).mean()
+            print(f'Mean norm: {mean_norm.item()}')
+            print(f'Mean point value: {Y.mean(dim=0).sum()}')
             # ((0 * -var).add(1e+4 * (torch.square(torch.linalg.norm(Y, dim=1).sum().subtract(DATA_SIZE)))).add(1e+3 * torch.square(Y.sum(dim=0)).sum())).backward()
             # (-var).backward()
 
@@ -254,15 +252,14 @@ for NOMINAL_CLASS in range(1, 10):
 
             kl_divergence = get_kl_divergence_of_kde(Y, z_params, uniform(), KERNEL_BANDWIDTH)
             print(f'KL divergence: {kl_divergence.item()}')
-            covariance_loss = torch.norm(torch.cov(torch.transpose(Y, 0, 1)) - torch.eye(ENCODING_DIM, device=device))
-            print(f'Covariance loss: {covariance_loss.item()}')
-            (kl_divergence + 0.1 * covariance_loss).backward()
+            # covariance_loss = torch.norm(torch.cov(torch.transpose(Y, 0, 1)) - torch.eye(ENCODING_DIM, device=device))
+            # print(f'Covariance loss: {covariance_loss.item()}')
+            (kl_divergence + torch.square(mean_norm.subtract(torch.tensor(1)))).backward()
 
             # inverse_sum_loss = get_inverse_sum_soft_tukey_depth(Y, z_params)
             # (inverse_sum_loss).backward()
 
             optimizer_encoder.step()
-
 
             if i % 1 == 0:
                 if ENCODING_DIM == 2:

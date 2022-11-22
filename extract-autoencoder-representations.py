@@ -1,11 +1,26 @@
 import torch
 import torchvision
 import torch.utils.data
+
+from models.AE_CIFAR10_32 import AE_CIFAR10_32
+from models.AE_CIFAR10_V3 import AE_CIFAR10_V3
+from models.AE_MNIST_32 import AE_MNIST_32
 from models.AE_MNIST_V3 import AE_MNIST_V3
 from preprocessing import get_target_label_idx, global_contrast_normalization
 
 
 USE_CUDA_IF_AVAILABLE = True
+TRAIN = True
+
+
+if torch.cuda.is_available():
+    print('GPU is available with the following device: {}'.format(torch.cuda.get_device_name()))
+else:
+    print('GPU is not available')
+
+device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_available() else 'cpu')
+print('The model will run with {}'.format(device))
+
 
 min_max_mnist = [(-0.8826567065619495, 9.001545489292527),
                    (-0.6661464580883915, 20.108062262467364),
@@ -20,34 +35,19 @@ min_max_mnist = [(-0.8826567065619495, 9.001545489292527),
 
 min_max_mnist_all = (-0.8826567065619495, 20.108062262467364)
 
-if torch.cuda.is_available():
-    print('GPU is available with the following device: {}'.format(torch.cuda.get_device_name()))
-else:
-    print('GPU is not available')
-
-device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_available() else 'cpu')
-print('The model will run with {}'.format(device))
-
-
 for nominal_class in range(0, 10):
-    data = torchvision.datasets.MNIST(
+    data = torchvision.datasets.CIFAR10(
         'datasets',
-        train=True,
+        train=TRAIN,
         download=True,
-        transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
-                                                  torchvision.transforms.Lambda(
-                                                      lambda x: global_contrast_normalization(x, scale='l1')),
-                                                  torchvision.transforms.Normalize(
-                                                      [min_max_mnist[nominal_class][0]],
-                                                      [min_max_mnist[nominal_class][1] -
-                                                       min_max_mnist[nominal_class][0]])])
+        transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
     )
 
-    data_latent = torch.zeros(len(data), 1, 128)
+    data_latent = torch.zeros(len(data), 1, 32)
 
     dataloader = torch.utils.data.DataLoader(data)
-    autoencoder = AE_MNIST_V3().to(device)
-    autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_V3_{nominal_class}'))
+    autoencoder = AE_CIFAR10_32().to(device)
+    autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_32_{nominal_class}'))
     autoencoder.eval()
 
     for step, x in enumerate(dataloader):
@@ -55,4 +55,4 @@ for nominal_class in range(0, 10):
         z, x_hat = autoencoder(x[0])
         data_latent[step][0] = z.detach()
 
-    torch.save(data_latent, f'./datasets/MNIST_AE_representation/AE_MNIST_V3_{nominal_class}')
+    torch.save(data_latent, f"./datasets/CIFAR10_AE_representation/AE_CIFAR10_32_{'train' if TRAIN else 'test'}_{nominal_class}")

@@ -8,7 +8,7 @@ class MNIST_AE_Encoder(nn.Module):
         super(MNIST_AE_Encoder, self).__init__()
 
         self.encoder = nn.Sequential(
-            nn.Linear(64, 64),
+            nn.Linear(128, 64),
             nn.ReLU(),
             nn.Linear(64, 64)
         )

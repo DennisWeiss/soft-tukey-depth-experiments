@@ -16,7 +16,7 @@ ANOMALOUS_DATASET = AnomalousMNISTAutoencoderDataset
 N_CLASSES = 10
 TUKEY_DEPTH_COMPUTATION_EPOCHS = 10
 TUKEY_DEPTH_COMPUTATIONS = 1
-SOFT_TUKEY_DEPTH_TEMP = 1
+SOFT_TUKEY_DEPTH_TEMP = 0.2
 BATCH_SIZE = 16
 TRAIN_SIZE = 1000
 TEST_NOMINAL_SIZE = 1000
@@ -34,7 +34,7 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 
-for i in range(2, 3):
+for i in range(1, 2):
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=True), list(range(TRAIN_SIZE)))
     test_data_nominal = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=False), list(range(TEST_NOMINAL_SIZE)))
     test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=i, train=False), list(range(TEST_ANOAMLOUS_SIZE)))
