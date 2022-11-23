@@ -9,12 +9,12 @@ import os
 
 
 CLASS = 1
-RESULT_NAME_DESC = 'AE_temp5'
+RESULT_NAME_DESC = 'var_max_1500_0.1_10epochs_lr1e-3'
 
-result_path = f'results/MNIST_class{CLASS}_Autoencoder_{RESULT_NAME_DESC}/'
+result_path = f'results/CIFAR10_class{CLASS}_Autoencoder_{RESULT_NAME_DESC}/'
 
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Autoencoder_Nominal_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Autoencoder_Anomalous_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_Encoder_{RESULT_NAME_DESC}_{CLASS}_run0.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_Encoder_{RESULT_NAME_DESC}_{CLASS}_run0.csv'), delimiter=',')
 
 tukey_depths = []
 
