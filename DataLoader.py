@@ -98,7 +98,7 @@ class NominalCIFAR10AutoencoderDataset(Dataset):
         autoencoder = AE_CIFAR10_V3()
         if device is not None:
             autoencoder = autoencoder.to(device)
-        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_V3_{nominal_class}'))
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_V3_{nominal_class}', map_location=device))
 
         for step, x in enumerate(dataloader):
             if device is not None:
@@ -130,7 +130,7 @@ class AnomalousCIFAR10AutoencoderDataset(Dataset):
         autoencoder = AE_CIFAR10_V3()
         if device is not None:
             autoencoder = autoencoder.to(device)
-        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_V3_{nominal_class}'))
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_V3_{nominal_class}', map_location=device))
 
         for step, x in enumerate(dataloader):
             if device is not None:
