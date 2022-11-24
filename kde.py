@@ -8,10 +8,10 @@ import sys
 import os
 
 
-CLASS = 1
-RESULT_NAME_DESC = 'var_max_1500_0.1_10epochs_lr1e-3'
+CLASS = 3
+RESULT_NAME_DESC = 'var_max_32'
 
-result_path = f'results/CIFAR10_class{CLASS}_Autoencoder_{RESULT_NAME_DESC}/'
+result_path = f'results/CIFAR10_class{CLASS}_Encoder_{RESULT_NAME_DESC}/'
 
 data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_Encoder_{RESULT_NAME_DESC}_{CLASS}_run0.csv'), delimiter=',')
 data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_Encoder_{RESULT_NAME_DESC}_{CLASS}_run0.csv'), delimiter=',')

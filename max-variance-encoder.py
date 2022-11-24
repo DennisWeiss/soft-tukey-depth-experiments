@@ -4,7 +4,7 @@ import torch
 import matplotlib.pyplot as plt
 from DataLoader import NominalMNISTImageDataset, AnomalousMNISTImageDataset, NominalCIFAR10ImageDataset, \
     AnomalousCIFAR10ImageDataset, NominalCIFAR10AutoencoderDataset, AnomalousCIFAR10AutoencoderDataset, \
-    NominalMNISTAutoencoderDataset, AnomalousMNISTAutoencoderDataset
+    NominalMNISTAutoencoderDataset, AnomalousMNISTAutoencoderDataset, NominalCIFAR10Dataset
 from models.CIFAR10_AE_Encoder import CIFAR10_AE_Encoder
 from models.CIFAR10_Encoder_V4 import CIFAR10_Encoder_V4
 from models.CIFAR10_Encoder_V5 import CIFAR10_Encoder_V5
@@ -22,7 +22,7 @@ import scipy as sp
 DATASET_NAME = 'CIFAR10_Autoencoder'
 NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
-RESULT_NAME_DESC = 'var_max_1500_0.1_10epochs_lr1e-3'
+RESULT_NAME_DESC = 'var_max_temp2'
 DATA_SIZE = 1500
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
@@ -30,12 +30,12 @@ TEST_ANOMALOUS_SIZE = 1000
 
 USE_CUDA_IF_AVAILABLE = True
 KERNEL_BANDWIDTH = 0.1
-SOFT_TUKEY_DEPTH_TEMP = 0.1
+SOFT_TUKEY_DEPTH_TEMP = 0.5
 ENCODING_DIM = 256
 HISTOGRAM_BINS = 50
 NUM_EPOCHS = 10
 STD_ITERATIONS = 3
-RUNS = 3
+RUNS = 1
 
 torch.autograd.set_detect_anomaly(True)
 
@@ -66,7 +66,7 @@ def soft_tukey_depth(x, x_, z):
 def get_mean_soft_tukey_depth(X, z_params):
     mean = torch.tensor(0).to(device)
     for i in range(X.size(dim=0)):
-        mean = mean.add(soft_tukey_depth(X[i], X, z_params[i]))
+        mean = mean.add(soft_tukey_depth(X[i], X, z_params[i]).divide(X.size(dim=0)))
     _mean = mean.divide(X.size(dim=0))
     print(_mean.item())
     return _mean
@@ -105,13 +105,13 @@ def get_kl_divergence_of_kde(X, z_params, target_dist, kernel_bandwidth):
     soft_tukey_depths = []
     for i in range(n):
         soft_tukey_depths.append(soft_tukey_depth(X[i], X, z_params[i]).divide(n))
-    for x in np.arange(0, 0.5, 0.01):
+    for x in np.arange(0, 0.5, 0.02):
         _sum = torch.tensor(0)
         for i in range(n):
             _sum = _sum.add(torch.exp(torch.square(soft_tukey_depths[i] - x).divide(torch.tensor(-2 * kernel_bandwidth * kernel_bandwidth))))
 
         target_val = target_dist(x) + 1e-2
-        kl_divergence = kl_divergence.subtract(torch.tensor(0.01).multiply(torch.tensor(target_val)).multiply(torch.log(_sum.divide(torch.tensor(n * target_val)))))
+        kl_divergence = kl_divergence.subtract(torch.tensor(0.02).multiply(torch.tensor(target_val)).multiply(torch.log(_sum.divide(torch.tensor(n * target_val)))))
     return kl_divergence
 
 
@@ -177,7 +177,7 @@ def draw_scatter_plot(X, z_params):
     X_np = X.detach().cpu().numpy()
     z_normalized = np.zeros(X.size())
     for i in range(len(z_params)):
-        z_normalized[i] = z_params[i].detach().cpu() / z_params[i].detach().cpu().norm()
+        z_normalized[i] = z_params[i].detach().cpu() / z_params[i].detach().cpu().center_norm()
 
     X_scatter_plot = plt.figure()
     plt.scatter(
@@ -201,20 +201,20 @@ def uniform():
 
 
 for run in range(RUNS):
-    for NOMINAL_CLASS in range(1, 10):
-        train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True, device=device), list(range(DATA_SIZE)))
+    for NOMINAL_CLASS in range(3, 4):
+        train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True), list(range(DATA_SIZE)))
         train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
 
-        test_data_nominal = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=False, device=device), list(range(TEST_NOMINAL_SIZE)))
+        test_data_nominal = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=False), list(range(TEST_NOMINAL_SIZE)))
         test_dataloader_nominal = torch.utils.data.DataLoader(test_data_nominal, batch_size=TEST_NOMINAL_SIZE, shuffle=True)
 
-        test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=NOMINAL_CLASS, train=False, device=device), list(range(TEST_ANOMALOUS_SIZE)))
+        test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=NOMINAL_CLASS, train=False), list(range(TEST_ANOMALOUS_SIZE)))
         test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=TEST_ANOMALOUS_SIZE, shuffle=True)
 
         encoder = CIFAR10_AE_Encoder().to(device)
         encoder.train()
 
-        optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=1e-3)
+        optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=3e-3, weight_decay=1e-2)
 
         # z = [torch.ones(X.size(dim=1), device=device) for i in range(X.size(dim=0))]
         # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
@@ -245,6 +245,8 @@ for run in range(RUNS):
                 mean_norm = torch.linalg.norm(Y, dim=1).mean()
                 print(f'Mean norm: {mean_norm.item()}')
                 print(f'Mean point value: {Y.mean(dim=0).sum()}')
+                center_norm = torch.linalg.norm(Y.mean(dim=0))
+                print(f'Center norm: {center_norm.item()}')
                 # ((0 * -var).add(1e+4 * (torch.square(torch.linalg.norm(Y, dim=1).sum().subtract(DATA_SIZE)))).add(1e+3 * torch.square(Y.sum(dim=0)).sum())).backward()
                 (-var).backward()
 
@@ -254,9 +256,10 @@ for run in range(RUNS):
 
                 # kl_divergence = get_kl_divergence_of_kde(Y, z_params, uniform(), KERNEL_BANDWIDTH)
                 # print(f'KL divergence: {kl_divergence.item()}')
+
                 # covariance_loss = torch.norm(torch.cov(torch.transpose(Y, 0, 1)) - torch.eye(ENCODING_DIM, device=device))
                 # print(f'Covariance loss: {covariance_loss.item()}')
-                # (kl_divergence + torch.square(mean_norm.subtract(torch.tensor(1)))).backward()
+                # (kl_divergence + torch.square(mean_norm.subtract(1)) + torch.square(center_norm)).backward()
 
                 # inverse_sum_loss = get_inverse_sum_soft_tukey_depth(Y, z_params)
                 # (inverse_sum_loss).backward()

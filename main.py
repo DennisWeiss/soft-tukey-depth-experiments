@@ -10,20 +10,20 @@ from models.RAE_CIFAR10 import RAE_CIFAR10
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'MNIST_Autoencoder'
-NOMINAL_DATASET = NominalMNISTAutoencoderDataset
-ANOMALOUS_DATASET = AnomalousMNISTAutoencoderDataset
+DATASET_NAME = 'CIFAR10_Autoencoder'
+NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
+ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
 N_CLASSES = 10
 TUKEY_DEPTH_COMPUTATION_EPOCHS = 10
 TUKEY_DEPTH_COMPUTATIONS = 1
-SOFT_TUKEY_DEPTH_TEMP = 0.2
+SOFT_TUKEY_DEPTH_TEMP = 1
 BATCH_SIZE = 16
 TRAIN_SIZE = 1000
 TEST_NOMINAL_SIZE = 1000
-TEST_ANOAMLOUS_SIZE = 1000
+TEST_ANOMALOUS_SIZE = 1000
 
 
-torch.manual_seed(160)
+# torch.manual_seed(160)
 
 if torch.cuda.is_available():
     print('GPU is available with the following device: {}'.format(torch.cuda.get_device_name()))
@@ -34,12 +34,12 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 
-for i in range(1, 2):
+for i in range(3, 4):
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=True), list(range(TRAIN_SIZE)))
     test_data_nominal = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=False), list(range(TEST_NOMINAL_SIZE)))
-    test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=i, train=False), list(range(TEST_ANOAMLOUS_SIZE)))
+    test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=i, train=False), list(range(TEST_ANOMALOUS_SIZE)))
 
-    test_dataloader_nominal = torch.utils.data.DataLoader(test_data_nominal)
+    test_dataloader_nominal = torch.utils.data.DataLoader(test_data_nominal, shuffle=True)
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, shuffle=True)
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
 
@@ -78,7 +78,7 @@ for i in range(1, 2):
 
         print(soft_tukey_depths)
 
-        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{type}_AE_temp5_{i}.csv', 'w'))
+        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{type}_AE_32_temp1_{i}.csv', 'w'))
         writer.writerow(soft_tukey_depths)
 
 

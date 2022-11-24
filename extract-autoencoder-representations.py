@@ -10,8 +10,7 @@ from preprocessing import get_target_label_idx, global_contrast_normalization
 
 
 USE_CUDA_IF_AVAILABLE = True
-TRAIN = True
-
+TRAIN = False
 
 if torch.cuda.is_available():
     print('GPU is available with the following device: {}'.format(torch.cuda.get_device_name()))
