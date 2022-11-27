@@ -21,19 +21,21 @@ import numpy as np
 DATASET_NAME = 'CIFAR10_Autoencoder'
 NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
-RESULT_NAME_DESC = 'var_max_2e-3_8epochs'
+RESULT_NAME_DESC = 'var_max_2e-3_14epochs'
 DATA_SIZE = 1000
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
 
 
 USE_CUDA_IF_AVAILABLE = True
+ENCODER_LEARNING_RATE = 2e-3
 KERNEL_BANDWIDTH = 0.05
 SOFT_TUKEY_DEPTH_TEMP = 0.1
 ENCODING_DIM = 256
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 8
+NUM_EPOCHS = 14
 STD_ITERATIONS = 3
+RUNS = 2
 
 torch.autograd.set_detect_anomaly(True)
 
@@ -148,6 +150,31 @@ def draw_histogram(X, X_, z_params, bins=200):
     tukey_depth_histogram.show()
 
 
+def draw_histogram_tukey_depth(soft_tukey_depths, bins=200):
+    tukey_depth_histogram = plt.figure()
+    plt.hist(np.asarray(soft_tukey_depths), bins=bins)
+    tukey_depth_histogram.show()
+
+
+def get_svd_dimensionality(singular_values, alpha=0.01):
+    _sum = 0
+    for i in range(len(singular_values)):
+        _sum += singular_values[i]
+    current_sum = 0
+    for i in range(len(singular_values)):
+        current_sum += singular_values[i]
+        if current_sum >= (1 - alpha) * _sum:
+            return i+1
+
+
+def draw_svd_plot(X, n, alpha=0.01):
+    singular_values = torch.linalg.svdvals(X)
+    svd_plot = plt.figure()
+    plt.bar(np.asarray(list(range(n))), singular_values.detach().cpu().numpy()[0:n])
+    svd_plot.show()
+    return get_svd_dimensionality(singular_values, alpha)
+
+
 def draw_scatter_plot(X, z_params):
     X_np = X.detach().cpu().numpy()
     z_normalized = np.zeros(X.size())
@@ -163,8 +190,8 @@ def draw_scatter_plot(X, z_params):
     X_scatter_plot.show()
 
 
-for run in range(3):
-    for NOMINAL_CLASS in range(3, 10):
+for run in range(RUNS):
+    for NOMINAL_CLASS in range(9, 10):
         train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True, device=device), list(range(DATA_SIZE)))
         train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
 
@@ -177,7 +204,7 @@ for run in range(3):
         encoder = CIFAR10_AE_Encoder().to(device)
         encoder.train()
 
-        optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=2e-3)
+        optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=ENCODER_LEARNING_RATE)
 
         # z = [torch.ones(X.size(dim=1), device=device) for i in range(X.size(dim=0))]
         # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
@@ -232,9 +259,16 @@ for run in range(3):
                         draw_scatter_plot(Y, z_params)
                     draw_histogram(Y, Y, z_params, bins=HISTOGRAM_BINS)
                 if i == NUM_EPOCHS - 1:
-                    draw_histogram(Y, Y, z_params, bins=HISTOGRAM_BINS)
-
                     Y = encoder(X)
+
+                    # soft_tukey_depths = []
+                    # for j in range(Y.size(dim=0)):
+                    #     soft_tukey_depths.append(soft_tukey_depth(Y[j], Y, z_params[j]).item() / Y.size(dim=0))
+                    #
+                    # draw_histogram_tukey_depth(soft_tukey_depths, bins=HISTOGRAM_BINS)
+                    svd_dim = draw_svd_plot(Y, 50, 0.01)
+                    print(f'SVD dimensionality: {svd_dim}')
+
 
                     for step2, X_test_nominal in enumerate(test_dataloader_nominal):
                         soft_tukey_depths = []

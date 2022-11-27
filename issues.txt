@@ -1,3 +1,33 @@
-- High dimension -> even for nominal data Tukey depth is often low
-- Random matrix projection: For Johnson-Lindenstrauss lemma to hold, higher dimension would be needed (or higher number of data points for a low dimension of 100) -> too much error introduced through random projection
-- SGD finds local minimum. Global minimum could be much lower -> Some anomalous data point get too high soft Tukey depth
+epoch 1: 50.56
+epoch 2: 51.68
+epoch 3: 52.83
+epoch 4: 54.06
+epoch 5: 55.07
+epoch 6: 56.01
+epoch 7: 56.93
+epoch 8: 57.77
+epoch 9: 58.24
+epoch 10: 58.19
+epoch 11: 58.23
+epoch 12: 57.99
+epoch 13: 58.00
+epoch 14: 57.82
+epoch 15: 58.04
+epoch 16: 57.75
+
+epoch 1: 224
+epoch 2: 224
+epoch 3: 223
+epoch 4: 223
+epoch 5: 222
+epoch 6: 221
+epoch 7: 221
+epoch 8: 220
+epoch 9: 219
+epoch 10: 218
+epoch 11: 216
+epoch 12: 214
+epoch 13: 212
+epoch 14: 210
+epoch 15: 208
+epoch 16: 207
