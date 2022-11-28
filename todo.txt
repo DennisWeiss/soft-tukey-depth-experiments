@@ -1,0 +1,4 @@
+- more data
+- more z_optim steps
+- train encoder directly
+- autoencoder pre-training

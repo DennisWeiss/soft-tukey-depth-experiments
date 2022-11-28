@@ -16,12 +16,13 @@ from models.CIFAR10_Encoder_Simple import CIFAR10_Encoder_Simple
 from models.CIFAR10_Encoder_V3 import CIFAR10_Encoder_V3
 import torch.utils.data
 import numpy as np
+import scipy as sp
 
 
 DATASET_NAME = 'CIFAR10_Autoencoder'
 NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
-RESULT_NAME_DESC = 'var_max_2e-3_14epochs'
+RESULT_NAME_DESC = 'var_max_2e-3_12epochs'
 DATA_SIZE = 1000
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
@@ -33,9 +34,9 @@ KERNEL_BANDWIDTH = 0.05
 SOFT_TUKEY_DEPTH_TEMP = 0.1
 ENCODING_DIM = 256
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 14
+NUM_EPOCHS = 12
 STD_ITERATIONS = 3
-RUNS = 2
+RUNS = 1
 
 torch.autograd.set_detect_anomaly(True)
 
@@ -296,6 +297,11 @@ for run in range(RUNS):
                             f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}.csv',
                             'w'))
                         writer.writerow(soft_tukey_depths)
+                        kde_writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}_kde.csv',
+                            'w'))
+                        kde_train = sp.stats.gaussian_kde(np.asarray(soft_tukey_depths), bw_method=1e-1)
+                        kde_writer.writerow([kde_train(x) for x in soft_tukey_depths])
+
 
                     for step2, X_test_anomalous in enumerate(test_dataloader_anomalous):
                         soft_tukey_depths = []
@@ -323,6 +329,11 @@ for run in range(RUNS):
                             f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}.csv',
                             'w'))
                         writer.writerow(soft_tukey_depths)
+                        kde_writer = csv.writer(open(
+                            f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}_kde.csv',
+                            'w'))
+                        kde_train = sp.stats.gaussian_kde(np.asarray(soft_tukey_depths), bw_method=1e-1)
+                        kde_writer.writerow([kde_train(x) for x in soft_tukey_depths])
 
 
         torch.save(encoder.state_dict(), f'./snapshots/{DATASET_NAME}_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}')
