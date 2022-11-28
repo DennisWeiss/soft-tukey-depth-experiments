@@ -9,13 +9,13 @@ import os
 
 
 CLASS = 9
-RESULT_NAME_DESC = 'var_max_2e-3_12epochs'
+RESULT_NAME_DESC = 'var_max_3e-4_80epochs_batches'
 RUN = 0
 
-result_path = f'results/CIFAR10_class{CLASS}_Autoencoder_{RESULT_NAME_DESC}_run{RUN}_kde/'
+result_path = f'results/CIFAR10_class{CLASS}_Autoencoder_{RESULT_NAME_DESC}_run{RUN}/'
 
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}_kde.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}_kde.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
 
 tukey_depths = []
 

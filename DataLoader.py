@@ -92,19 +92,7 @@ class NominalCIFAR10AutoencoderDataset(Dataset):
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
 
-        self.data_latent = torch.zeros(len(self.data), 1, 512)
-
-        dataloader = torch.utils.data.DataLoader(self.data)
-        autoencoder = AE_CIFAR10_V3()
-        if device is not None:
-            autoencoder = autoencoder.to(device)
-        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_V3_{nominal_class}', map_location=device))
-
-        for step, x in enumerate(dataloader):
-            if device is not None:
-                x[0] = x[0].to(device)
-            z, x_hat = autoencoder(x[0])
-            self.data_latent[step][0] = z.detach()
+        self.data_latent = torch.load(f"./representations/CIFAR10_AE_representation/AE_CIFAR10_V3_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
     def __getitem__(self, item):
         return self.data_latent[self.indices[item % len(self.indices)]][0]
@@ -124,19 +112,7 @@ class AnomalousCIFAR10AutoencoderDataset(Dataset):
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
 
-        self.data_latent = torch.zeros(len(self.data), 1, 512)
-
-        dataloader = torch.utils.data.DataLoader(self.data)
-        autoencoder = AE_CIFAR10_V3()
-        if device is not None:
-            autoencoder = autoencoder.to(device)
-        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_CIFAR10_V3_{nominal_class}', map_location=device))
-
-        for step, x in enumerate(dataloader):
-            if device is not None:
-                x[0] = x[0].to(device)
-            z, x_hat = autoencoder(x[0])
-            self.data_latent[step][0] = z.detach()
+        self.data_latent = torch.load(f"./representations/CIFAR10_AE_representation/AE_CIFAR10_V3_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
     def __getitem__(self, item):
         return self.data_latent[self.indices[item % len(self.indices)]][0]

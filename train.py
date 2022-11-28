@@ -19,23 +19,27 @@ import numpy as np
 import scipy as sp
 
 
+for i in np.random.permutation(6):
+    print(i)
+
+
 DATASET_NAME = 'CIFAR10_Autoencoder'
 NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
-RESULT_NAME_DESC = 'var_max_2e-3_12epochs'
-DATA_SIZE = 1000
+RESULT_NAME_DESC = 'var_max_3e-4_80epochs_batches'
+DATA_SIZE = 2048
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
 
 
 USE_CUDA_IF_AVAILABLE = True
-ENCODER_LEARNING_RATE = 2e-3
+ENCODER_LEARNING_RATE = 3e-4
 KERNEL_BANDWIDTH = 0.05
 SOFT_TUKEY_DEPTH_TEMP = 0.1
 ENCODING_DIM = 256
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 12
-STD_ITERATIONS = 3
+NUM_EPOCHS = 80
+STD_ITERATIONS = 6
 RUNS = 1
 
 torch.autograd.set_detect_anomaly(True)
@@ -210,7 +214,7 @@ for run in range(RUNS):
         # z = [torch.ones(X.size(dim=1), device=device) for i in range(X.size(dim=0))]
         # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
         z_params = [torch.nn.Parameter(torch.rand(ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1))) for i in range(len(train_data))]
-        optimizer_z = torch.optim.SGD(z_params, lr=3e-2)
+        optimizer_z = torch.optim.SGD(z_params, lr=1e-2)
 
 
         for i in range(NUM_EPOCHS):
@@ -221,7 +225,8 @@ for run in range(RUNS):
                 X = X.to(device)
                 Y = encoder(X)
 
-                for j in range(n):
+                random_indices = np.random.permutation(n)[0:256]
+                for j in random_indices:
                     for k in range(STD_ITERATIONS):
                         optimizer_encoder.zero_grad()
                         optimizer_z.zero_grad()
@@ -233,8 +238,9 @@ for run in range(RUNS):
                 optimizer_encoder.zero_grad()
                 optimizer_z.zero_grad()
 
-
-                var = get_variance_soft_tukey_depth(Y, z_params)
+                Y_subset = torch.index_select(Y, 0, torch.as_tensor(random_indices, device=device))
+                z_subset = [z_params[idx] for idx in random_indices]
+                var = get_variance_soft_tukey_depth(Y_subset, z_subset)
                 print(f'Variance: {var.item()}')
                 print(f'Total norm: {torch.linalg.norm(Y, dim=1).sum().item()}')
                 print(f'Total point value: {Y.sum(dim=0).sum()}')
@@ -257,8 +263,8 @@ for run in range(RUNS):
 
                 if i % 1 == 0:
                     if ENCODING_DIM == 2:
-                        draw_scatter_plot(Y, z_params)
-                    draw_histogram(Y, Y, z_params, bins=HISTOGRAM_BINS)
+                        draw_scatter_plot(Y_subset, z_subset)
+                    draw_histogram(Y_subset, Y_subset, z_subset, bins=HISTOGRAM_BINS)
                 if i == NUM_EPOCHS - 1:
                     Y = encoder(X)
 
@@ -297,10 +303,6 @@ for run in range(RUNS):
                             f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}.csv',
                             'w'))
                         writer.writerow(soft_tukey_depths)
-                        kde_writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}_kde.csv',
-                            'w'))
-                        kde_train = sp.stats.gaussian_kde(np.asarray(soft_tukey_depths), bw_method=1e-1)
-                        kde_writer.writerow([kde_train(x) for x in soft_tukey_depths])
 
 
                     for step2, X_test_anomalous in enumerate(test_dataloader_anomalous):
@@ -329,11 +331,6 @@ for run in range(RUNS):
                             f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}.csv',
                             'w'))
                         writer.writerow(soft_tukey_depths)
-                        kde_writer = csv.writer(open(
-                            f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}_kde.csv',
-                            'w'))
-                        kde_train = sp.stats.gaussian_kde(np.asarray(soft_tukey_depths), bw_method=1e-1)
-                        kde_writer.writerow([kde_train(x) for x in soft_tukey_depths])
 
 
         torch.save(encoder.state_dict(), f'./snapshots/{DATASET_NAME}_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}')
