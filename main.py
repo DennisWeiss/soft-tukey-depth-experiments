@@ -10,15 +10,15 @@ from models.RAE_CIFAR10 import RAE_CIFAR10
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'MNIST_Autoencoder'
-NOMINAL_DATASET = NominalMNISTAutoencoderDataset
-ANOMALOUS_DATASET = AnomalousMNISTAutoencoderDataset
+DATASET_NAME = 'CIFAR10_Autoencoder'
+NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
+ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
 N_CLASSES = 10
 TUKEY_DEPTH_COMPUTATION_EPOCHS = 10
 TUKEY_DEPTH_COMPUTATIONS = 1
 SOFT_TUKEY_DEPTH_TEMP = 1
 BATCH_SIZE = 16
-TRAIN_SIZE = 1000
+TRAIN_SIZE = 6000
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOAMLOUS_SIZE = 1000
 
@@ -34,7 +34,7 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 
-for i in range(2, 3):
+for i in range(0, 1):
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=True), list(range(TRAIN_SIZE)))
     test_data_nominal = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=False), list(range(TEST_NOMINAL_SIZE)))
     test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=i, train=False), list(range(TEST_ANOAMLOUS_SIZE)))
@@ -78,7 +78,7 @@ for i in range(2, 3):
 
         print(soft_tukey_depths)
 
-        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{type}_AE_temp5_{i}.csv', 'w'))
+        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{type}_TDAE_{i}.csv', 'w'))
         writer.writerow(soft_tukey_depths)
 
 

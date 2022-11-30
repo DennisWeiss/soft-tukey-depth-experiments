@@ -1,3 +1,7 @@
+- max var encoder: try fixed mean
+- tdae: try fixed mean and batches
+
+
 - more data
 - more z_optim steps
 - train encoder directly

@@ -20,7 +20,7 @@ class CIFAR10_Encoder_V6(nn.Module):
             nn.BatchNorm2d(48, eps=1e-4, affine=False),
             nn.LeakyReLU(),
             nn.Flatten(),
-            nn.Linear(48 * 4 * 4, 512)
+            nn.Linear(48 * 4 * 4, 256)
         )
 
     def forward(self, x):

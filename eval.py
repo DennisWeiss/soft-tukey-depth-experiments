@@ -8,14 +8,14 @@ import sys
 import os
 
 
-CLASS = 9
-RESULT_NAME_DESC = 'var_max_3e-4_80epochs_batches'
+CLASS = 0
+RESULT_NAME_DESC = 'TDAE'
 RUN = 0
 
 result_path = f'results/CIFAR10_class{CLASS}_Autoencoder_{RESULT_NAME_DESC}_run{RUN}/'
 
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
 
 tukey_depths = []
 
@@ -34,7 +34,7 @@ if not os.path.exists(result_path):
 
 kde_0 = sp.stats.gaussian_kde(tukey_depths[0], bw_method=1e-1)
 kde_1 = sp.stats.gaussian_kde(tukey_depths[1], bw_method=1e-1)
-x = np.arange(0, 200, 1e-2)
+x = np.arange(0, 0.5, 1e-5)
 y0 = kde_0(x)
 y1 = kde_1(x)
 
@@ -91,7 +91,7 @@ def compute_auroc(true_positive_rates, false_positive_rates):
 true_positive_rates = []
 false_positive_rates = []
 
-for threshold in np.arange(0, 200, 1e-3):
+for threshold in np.arange(0, 0.5, 1e-5):
     true_positive_rates.append(get_true_positive_rate(tukey_depths[1], threshold))
     false_positive_rates.append(get_false_positive_rate(tukey_depths[0], threshold))
 
