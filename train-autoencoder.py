@@ -66,7 +66,7 @@ for CLASS in range(0, 1):
     test_data = NominalMNISTImageDataset(nominal_class=CLASS, train=False)
     test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=32, pin_memory=True)
 
-    autoencoder = AE_MNIST_V2().to(device)
+    autoencoder = AE_CIFAR10_V4().to(device)
     # print(list(autoencoder.parameters()))
     print(len(train_dataloader))
 
