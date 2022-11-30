@@ -147,4 +147,4 @@ for CLASS in range(0, 1):
         print(f'Test total loss: {total_loss.item()}')
         print(f'Test reconstruction loss: {total_rec_loss.item()}')
 
-    torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_FB_{CLASS}')
+    torch.save(autoencoder.state_dict(), f'./snapshots/TDAE_{DATASET_NAME}_{CLASS}')
