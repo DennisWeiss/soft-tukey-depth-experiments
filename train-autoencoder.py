@@ -60,10 +60,10 @@ def get_variance_soft_tukey_depth(X, z_params):
 
 
 for CLASS in range(0, 1):
-    train_data = torch.utils.data.Subset(NominalMNISTImageDataset(nominal_class=CLASS, train=True), list(range(1024)))
+    train_data = torch.utils.data.Subset(NominalCIFAR10ImageDataset(nominal_class=CLASS, train=True), list(range(1024)))
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=len(train_data), pin_memory=True)
 
-    test_data = NominalMNISTImageDataset(nominal_class=CLASS, train=False)
+    test_data = NominalCIFAR10ImageDataset(nominal_class=CLASS, train=False)
     test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=32, pin_memory=True)
 
     autoencoder = AE_CIFAR10_V4().to(device)
