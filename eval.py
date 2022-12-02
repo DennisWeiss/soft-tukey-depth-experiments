@@ -8,14 +8,14 @@ import sys
 import os
 
 
-CLASS = 0
-RESULT_NAME_DESC = 'TDAE'
+CLASS = 9
+RESULT_NAME_DESC = 'max_1e-3_lambda3e-1_3epochs_4096'
 RUN = 0
 
 result_path = f'results/CIFAR10_class{CLASS}_Autoencoder_{RESULT_NAME_DESC}_run{RUN}/'
 
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
 
 tukey_depths = []
 
