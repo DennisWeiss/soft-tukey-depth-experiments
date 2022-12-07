@@ -92,7 +92,7 @@ class NominalCIFAR10AutoencoderDataset(Dataset):
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
 
-        self.data_latent = torch.load(f"./representations/CIFAR10_AE_representation/AE_CIFAR10_V3_{'train' if train else 'test'}_{nominal_class}", map_location=device)
+        self.data_latent = torch.load(f"./representations/CIFAR10_AE_representation/AE_CIFAR10_V5_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
     def __getitem__(self, item):
         return self.data_latent[self.indices[item % len(self.indices)]][0]
@@ -112,7 +112,7 @@ class AnomalousCIFAR10AutoencoderDataset(Dataset):
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
 
-        self.data_latent = torch.load(f"./representations/CIFAR10_AE_representation/AE_CIFAR10_V3_{'train' if train else 'test'}_{nominal_class}", map_location=device)
+        self.data_latent = torch.load(f"./representations/CIFAR10_AE_representation/AE_CIFAR10_V5_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
     def __getitem__(self, item):
         return self.data_latent[self.indices[item % len(self.indices)]][0]
@@ -354,7 +354,7 @@ class NominalMNISTAutoencoderDataset(Dataset):
         autoencoder = AE_MNIST_V2()
         if device is not None:
             autoencoder = autoencoder.to(device)
-        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_V2_{nominal_class}'))
+        autoencoder.load_state_dict(torch.load(f'./snapshots/TDAE_var_max_MNIST_{nominal_class}'))
         autoencoder.eval()
 
         for step, x in enumerate(dataloader):
@@ -393,7 +393,7 @@ class AnomalousMNISTAutoencoderDataset(Dataset):
         autoencoder = AE_MNIST_V2()
         if device is not None:
             autoencoder = autoencoder.to(device)
-        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_V2_{nominal_class}'))
+        autoencoder.load_state_dict(torch.load(f'./snapshots/TDAE_var_max_MNIST_{nominal_class}'))
         autoencoder.eval()
 
         for step, x in enumerate(dataloader):
@@ -401,6 +401,58 @@ class AnomalousMNISTAutoencoderDataset(Dataset):
                 x[0] = x[0].to(device)
             z, x_hat = autoencoder(x[0])
             self.data_latent[step][0] = z.detach()
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data_latent[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class NominalMNISTAutoencoderCachedDataset(Dataset):
+    def __init__(self, nominal_class, train=True, device=None):
+        self.data = torchvision.datasets.MNIST(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
+                                                      torchvision.transforms.Lambda(
+                                                          lambda x: global_contrast_normalization(x, scale='l1')),
+                                                      torchvision.transforms.Normalize(
+                                                          [min_max_mnist[nominal_class][0]],
+                                                          [min_max_mnist[nominal_class][1] -
+                                                           min_max_mnist[nominal_class][0]])])
+        )
+
+        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/TDAE_avg_max_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data_latent[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class AnomalousMNISTAutoencoderCachedDataset(Dataset):
+    def __init__(self, nominal_class, train=True, device=None):
+        self.data = torchvision.datasets.MNIST(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
+                                                      torchvision.transforms.Lambda(
+                                                          lambda x: global_contrast_normalization(x, scale='l1')),
+                                                      torchvision.transforms.Normalize(
+                                                          [min_max_mnist[nominal_class][0]],
+                                                          [min_max_mnist[nominal_class][1] -
+                                                           min_max_mnist[nominal_class][0]])])
+        )
+
+        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/TDAE_avg_max_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
 

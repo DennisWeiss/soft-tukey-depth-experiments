@@ -19,10 +19,10 @@ class AE_CIFAR10_V4(nn.Module):
             nn.BatchNorm2d(48, eps=1e-4, affine=False),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(48 * 4 * 4, 512)
+            nn.Linear(48 * 4 * 4, 32)
         )
         self.decoder = nn.Sequential(
-            nn.Linear(512, 48 * 4 * 4),
+            nn.Linear(32, 48 * 4 * 4),
             nn.Unflatten(dim=1, unflattened_size=(48, 4, 4)),
 			nn.ConvTranspose2d(48, 36, 6, stride=2, padding=2),  # [batch, 24, 8, 8]
             nn.ReLU(),
