@@ -354,7 +354,7 @@ class NominalMNISTAutoencoderDataset(Dataset):
         autoencoder = AE_MNIST_V2()
         if device is not None:
             autoencoder = autoencoder.to(device)
-        autoencoder.load_state_dict(torch.load(f'./snapshots/TDAE_var_max_MNIST_{nominal_class}'))
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_{nominal_class}'))
         autoencoder.eval()
 
         for step, x in enumerate(dataloader):
@@ -393,7 +393,7 @@ class AnomalousMNISTAutoencoderDataset(Dataset):
         autoencoder = AE_MNIST_V2()
         if device is not None:
             autoencoder = autoencoder.to(device)
-        autoencoder.load_state_dict(torch.load(f'./snapshots/TDAE_var_max_MNIST_{nominal_class}'))
+        autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_{nominal_class}'))
         autoencoder.eval()
 
         for step, x in enumerate(dataloader):
@@ -426,7 +426,7 @@ class NominalMNISTAutoencoderCachedDataset(Dataset):
                                                            min_max_mnist[nominal_class][0]])])
         )
 
-        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/TDAE_avg_max_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
+        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/AE_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
 
@@ -452,7 +452,7 @@ class AnomalousMNISTAutoencoderCachedDataset(Dataset):
                                                            min_max_mnist[nominal_class][0]])])
         )
 
-        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/TDAE_avg_max_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
+        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/AE_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
 

@@ -4,12 +4,15 @@ import torch
 import matplotlib.pyplot as plt
 from DataLoader import NominalMNISTImageDataset, AnomalousMNISTImageDataset, NominalCIFAR10ImageDataset, \
     AnomalousCIFAR10ImageDataset, NominalCIFAR10AutoencoderDataset, AnomalousCIFAR10AutoencoderDataset, \
-    NominalMNISTAutoencoderDataset, AnomalousMNISTAutoencoderDataset
+    NominalMNISTAutoencoderDataset, AnomalousMNISTAutoencoderDataset, NominalMNISTAutoencoderCachedDataset, \
+    AnomalousMNISTAutoencoderCachedDataset
 from models.CIFAR10_AE_Encoder import CIFAR10_AE_Encoder
+from models.CIFAR10_AE_Encoder_V2 import CIFAR10_AE_Encoder_V2
 from models.CIFAR10_Encoder_V4 import CIFAR10_Encoder_V4
 from models.CIFAR10_Encoder_V5 import CIFAR10_Encoder_V5
 from models.CIFAR10_Encoder_V6 import CIFAR10_Encoder_V6
 from models.MNIST_AE_Encoder import MNIST_AE_Encoder
+from models.MNIST_Encoder import MNIST_Encoder
 from models.MNIST_Encoder_Simple import MNIST_Encoder_Simple
 from models.MNIST_Encoder_DSVDD import MNIST_Encoder_DSVDD
 from models.CIFAR10_Encoder_Simple import CIFAR10_Encoder_Simple
@@ -19,22 +22,22 @@ import numpy as np
 import scipy as sp
 
 
-DATASET_NAME = 'CIFAR10_Autoencoder'
-NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
-ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
-RESULT_NAME_DESC = '4000_64_temp0.2'
-DATA_SIZE = 4000
+DATASET_NAME = 'MNIST_Autoencoder'
+NOMINAL_DATASET = NominalMNISTAutoencoderCachedDataset
+ANOMALOUS_DATASET = AnomalousMNISTAutoencoderCachedDataset
+RESULT_NAME_DESC = '2000_32_temp0.5'
+DATA_SIZE = 2000
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
 
 
 USE_CUDA_IF_AVAILABLE = True
-BATCH_SIZE = 500
-ENCODER_LEARNING_RATE = 1e-3
-HALFSPACE_OPTIMIZER_LEARNING_RATE = 1e+3
+BATCH_SIZE = 2000
+ENCODER_LEARNING_RATE = 3e-3
+HALFSPACE_OPTIMIZER_LEARNING_RATE = 1e+4
 KERNEL_BANDWIDTH = 0.05
-SOFT_TUKEY_DEPTH_TEMP = 0.2
-ENCODING_DIM = 64
+SOFT_TUKEY_DEPTH_TEMP = 0.5
+ENCODING_DIM = 32
 HISTOGRAM_BINS = 50
 NUM_EPOCHS = 10
 STD_ITERATIONS = 10
@@ -130,7 +133,7 @@ def draw_scatter_plot(X, z_params):
 
 
 for run in range(RUNS):
-    for NOMINAL_CLASS in range(9, 10):
+    for NOMINAL_CLASS in range(7, 8):
         train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True), list(range(DATA_SIZE)))
         train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE)
         train_dataloader_full_data = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
@@ -141,7 +144,7 @@ for run in range(RUNS):
         test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=NOMINAL_CLASS, train=False), list(range(TEST_ANOMALOUS_SIZE)))
         test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=TEST_ANOMALOUS_SIZE, shuffle=True)
 
-        encoder = CIFAR10_AE_Encoder().to(device)
+        encoder = MNIST_AE_Encoder().to(device)
         encoder.train()
 
         optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=ENCODER_LEARNING_RATE)
@@ -150,7 +153,6 @@ for run in range(RUNS):
         # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
         z_params = torch.nn.Parameter(torch.rand(len(train_data), ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)))
         optimizer_z = torch.optim.SGD([z_params], lr=HALFSPACE_OPTIMIZER_LEARNING_RATE)
-
 
         for i in range(NUM_EPOCHS):
             print(f'Epoch {i+1}')
@@ -179,12 +181,41 @@ for run in range(RUNS):
                     X_train = X_train.to(device)
                     Y_train = encoder(X_train)
 
-                    tds = soft_tukey_depth_v2(Y_train, Y, z_params.detach(), SOFT_TUKEY_DEPTH_TEMP)
+                    tds = soft_tukey_depth_v2(Y, Y_train, z_params.detach(), SOFT_TUKEY_DEPTH_TEMP)
                     var = torch.var(tds)
                     print(f'Variance: {var.item()}')
-                    print(f'Mean: {tds.mean().item()}')
+                    mean_td = tds.mean()
+                    print(f'Mean: {mean_td.item()}')
                     (-var).backward()
+                    # (-mean_td).backward()
                     optimizer_encoder.step()
+
+                # for l in range(1):
+                #     X_rand = torch.rand(BATCH_SIZE, 512, device=device).multiply(1).subtract(0.5)
+                #     Y_rand = encoder(X_rand)
+                #
+                #     z_rand = torch.nn.Parameter(torch.rand(BATCH_SIZE, ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)))
+                #     z_rand_optim = torch.optim.SGD([z_rand], lr=HALFSPACE_OPTIMIZER_LEARNING_RATE)
+                #
+                #     for k in range(2*STD_ITERATIONS):
+                #         z_rand_optim.zero_grad()
+                #         for step2, X_train in enumerate(train_dataloader_full_data):
+                #             X_train = X_train.to(device)
+                #             Y_train = encoder(X_train)
+                #
+                #             _soft_tukey_depth = soft_tukey_depth_v2(Y_rand.detach(), Y_train.detach(), z_rand, SOFT_TUKEY_DEPTH_TEMP)
+                #             _soft_tukey_depth.sum().backward()
+                #             z_rand_optim.step()
+                #
+                #     for step2, X_train in enumerate(train_dataloader_full_data):
+                #         X_train = X_train.to(device)
+                #         Y_train = encoder(X_train)
+                #
+                #         tds = soft_tukey_depth_v2(Y_rand, Y_train.detach(), z_rand, SOFT_TUKEY_DEPTH_TEMP)
+                #         mean_td = tds.mean()
+                #         print(f'Random mean: {mean_td.item()}')
+                #         (mean_td).backward()
+                #         optimizer_encoder.step()
 
                 # print(f'Total norm: {torch.linalg.norm(Y, dim=1).sum().item()}')
                 # print(f'Total point value: {Y.sum(dim=0).sum()}')

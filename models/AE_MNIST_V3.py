@@ -33,7 +33,7 @@ class AE_MNIST_V3(nn.Module):
         layer1 = F.interpolate(F.leaky_relu(self.unflatten_layer(z)), scale_factor=2)
         layer2 = F.interpolate(F.leaky_relu(self.bn3(self.convT_layer1(layer1))), scale_factor=2)
         layer3 = F.interpolate(F.leaky_relu(self.bn4(self.convT_layer2(layer2))), scale_factor=2)
-        output = torch.relu(self.convT_layer3(layer3))
+        output = torch.sigmoid(self.convT_layer3(layer3))
         return output
 
     def forward(self, x):

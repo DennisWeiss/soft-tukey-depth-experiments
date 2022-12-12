@@ -12,7 +12,7 @@ from preprocessing import get_target_label_idx, global_contrast_normalization
 
 
 USE_CUDA_IF_AVAILABLE = True
-TRAIN = True
+TRAIN = False
 
 if torch.cuda.is_available():
     print('GPU is available with the following device: {}'.format(torch.cuda.get_device_name()))
@@ -36,7 +36,7 @@ min_max_mnist = [(-0.8826567065619495, 9.001545489292527),
 
 min_max_mnist_all = (-0.8826567065619495, 20.108062262467364)
 
-for nominal_class in range(0, 1):
+for nominal_class in range(0, 10):
     data = torchvision.datasets.MNIST(
         'datasets',
         train=TRAIN,
@@ -61,7 +61,7 @@ for nominal_class in range(0, 1):
 
     dataloader = torch.utils.data.DataLoader(data)
     autoencoder = AE_MNIST_V2().to(device)
-    autoencoder.load_state_dict(torch.load(f'./snapshots/TDAE_var_max_MNIST_{nominal_class}'))
+    autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_{nominal_class}'))
     autoencoder.eval()
 
     for step, x in enumerate(dataloader):
@@ -69,4 +69,4 @@ for nominal_class in range(0, 1):
         z, x_hat = autoencoder(x[0])
         data_latent[step][0] = z.detach()
 
-    torch.save(data_latent, f"./representations/MNIST_AE_representation/TDAE_var_max_MNIST_{'train' if TRAIN else 'test'}_{nominal_class}")
+    torch.save(data_latent, f"./representations/MNIST_AE_representation/AE_MNIST_{'train' if TRAIN else 'test'}_{nominal_class}")

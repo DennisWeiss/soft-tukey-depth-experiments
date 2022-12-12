@@ -7,23 +7,22 @@ import numpy as np
 import csv
 import matplotlib.pyplot as plt
 
-from DataLoader import NominalMNISTImageDataset, AnomalousMNISTImageDataset
+from DataLoader import NominalMNISTImageDataset, AnomalousMNISTImageDataset, NominalCIFAR10ImageDataset, \
+    AnomalousCIFAR10ImageDataset
 
-CLASS = 0
-RESULT_NAME_DESC = 'temp2'
+CLASS = 1
+RESULT_NAME_DESC = 'temp1_fulldata'
 RUN = 0
 
-result_path = f'results/MNIST_Autoencoder_class{CLASS}_{RESULT_NAME_DESC}_run{RUN}/'
-
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Autoencoder_Nominal_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Autoencoder_Anomalous_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
 
 
 for type, data in [['Nominal', data0], ['Anomalous', data1]]:
     for row, values in enumerate(data):
         if len(values) > 0:
             test_data = torch.utils.data.Subset(
-                (NominalMNISTImageDataset if type == 'Nominal' else AnomalousMNISTImageDataset)(nominal_class=CLASS, train=False),
+                (NominalCIFAR10ImageDataset if type == 'Nominal' else AnomalousCIFAR10ImageDataset)(nominal_class=CLASS, train=False),
                 list(range(len(values)))
             )
             test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=len(values))
@@ -32,11 +31,11 @@ for type, data in [['Nominal', data0], ['Anomalous', data1]]:
                 td_values = [(i, float(x)) for i, x in enumerate(values)]
                 td_values.sort(key=lambda x: x[1])
                 print(td_values)
-                for i in range(8):
+                for i in range(4):
                     plt.imshow(np.transpose(X[td_values[i][0]].numpy(), (1, 2, 0)))
                     plt.show()
                     sleep(0.1)
-                for i in range(8):
+                for i in range(4):
                     plt.imshow(np.transpose(X[td_values[len(values)-1-i][0]].numpy(), (1, 2, 0)))
                     plt.show()
                     sleep(0.1)

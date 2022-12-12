@@ -122,7 +122,7 @@ for CLASS in range(0, 1):
                 rec_loss = get_loss_rec(X, X_hat)
                 print(f'Reconstruction loss: {rec_loss.item()}')
 
-                total_loss = rec_loss - 10 * var + 1e-5 * get_loss_reg(autoencoder)
+                total_loss = rec_loss + 1e-3 * get_loss_rae(Z) + 1e-5 * get_loss_reg(autoencoder)
                 print(f'Total loss: {total_loss.item()}')
 
                 total_loss.backward()
@@ -160,4 +160,4 @@ for CLASS in range(0, 1):
         print(f'Test total loss: {total_loss.item()}')
         print(f'Test reconstruction loss: {total_rec_loss.item()}')
 
-        torch.save(autoencoder.state_dict(), f'./snapshots/TDAE_var_max_{DATASET_NAME}_{CLASS}')
+        torch.save(autoencoder.state_dict(), f'./snapshots/RAE_{DATASET_NAME}_{CLASS}')

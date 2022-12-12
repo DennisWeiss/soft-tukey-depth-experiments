@@ -11,17 +11,17 @@ from models.RAE_CIFAR10 import RAE_CIFAR10
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'MNIST_Autoencoder'
-NOMINAL_DATASET = NominalMNISTAutoencoderDataset
-ANOMALOUS_DATASET = AnomalousMNISTAutoencoderDataset
+DATASET_NAME = 'CIFAR10_Autoencoder'
+NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
+ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
 N_CLASSES = 10
 TUKEY_DEPTH_COMPUTATION_EPOCHS = 10
 TUKEY_DEPTH_COMPUTATIONS = 1
 SOFT_TUKEY_DEPTH_TEMP = 1
-BATCH_SIZE = 16
-TRAIN_SIZE = 4000
+BATCH_SIZE = 64
+TRAIN_SIZE = 5000
 TEST_NOMINAL_SIZE = 1000
-TEST_ANOAMLOUS_SIZE = 1000
+TEST_ANOAMLOUS_SIZE = 9000
 
 
 if torch.cuda.is_available():
@@ -42,13 +42,13 @@ def soft_tukey_depth_v2(X_, X, Z, temp):
     return torch.sigmoid(dot_products_normalized).sum(dim=0).divide(X.size(dim=0))
 
 
-for i in range(0, 1):
+for i in range(9, 10):
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=True), list(range(TRAIN_SIZE)))
     test_data_nominal = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=False), list(range(TEST_NOMINAL_SIZE)))
     test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=i, train=False), list(range(TEST_ANOAMLOUS_SIZE)))
 
-    test_dataloader_nominal = torch.utils.data.DataLoader(test_data_nominal, batch_size=TEST_NOMINAL_SIZE)
-    test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=TEST_ANOAMLOUS_SIZE)
+    test_dataloader_nominal = torch.utils.data.DataLoader(test_data_nominal, batch_size=BATCH_SIZE)
+    test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=BATCH_SIZE)
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=TRAIN_SIZE)
 
     for test_dataloader, type in [(test_dataloader_nominal, 'Nominal'), (test_dataloader_anomalous, 'Anomalous')]:
@@ -67,11 +67,9 @@ for i in range(0, 1):
                 x2 = x2.to(device)
                 x2_detached = x2.detach()
                 for j in range(TUKEY_DEPTH_COMPUTATIONS):
-                    print(j)
                     z = torch.nn.Parameter(torch.rand(x.size(dim=0), x.size(dim=1), device=device))
                     optimizer = torch.optim.SGD([z], lr=300)
                     for k in range(TUKEY_DEPTH_COMPUTATION_EPOCHS):
-                        print(k)
                         _soft_tukey_depth = soft_tukey_depth_v2(x_detached, x2_detached, z, SOFT_TUKEY_DEPTH_TEMP)
                         _soft_tukey_depth.sum().backward()
                         optimizer.step()
@@ -85,16 +83,16 @@ for i in range(0, 1):
                     torch.cuda.empty_cache()
 
 
-            print(min_tukey_depth.mean().item())
+            print(f'Mean TD is {min_tukey_depth.mean().item()}')
 
             for j in range(x.size(dim=0)):
-                print(f"Item {j+1}/{TEST_NOMINAL_SIZE if type == 'Nominal' else TEST_ANOAMLOUS_SIZE}")
+                print(f"Item {item * BATCH_SIZE + j + 1}/{TEST_NOMINAL_SIZE if type == 'Nominal' else TEST_ANOAMLOUS_SIZE}")
                 soft_tukey_depths.append(min_tukey_depth[j].item())
                 print(f'Soft tukey depth is {min_tukey_depth[j].item()}')
 
         print(soft_tukey_depths)
 
-        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{type}_temp2_{i}.csv', 'w'))
+        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{type}_temp1_fulldata_{i}.csv', 'w'))
         writer.writerow(soft_tukey_depths)
 
 

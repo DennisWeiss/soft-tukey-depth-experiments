@@ -18,7 +18,8 @@ from models.resnet import ResNet50
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'CIFAR10'
+DATASET_NAME = 'MNIST'
+SAVE_MODEL = True
 # CLASS = 0
 NUM_EPOCHS = 200
 BATCHS_SIZE = 64
@@ -33,14 +34,14 @@ else:
 device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_available() else 'cpu')
 print('The model will run with {}'.format(device))
 
-for CLASS in range(2, 10):
-    train_data = NominalCIFAR10ImageDataset(train=True, nominal_class=CLASS)
+for CLASS in range(1, 10):
+    train_data = NominalMNISTImageDataset(train=True, nominal_class=CLASS)
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCHS_SIZE, pin_memory=True)
 
-    test_data = NominalCIFAR10ImageDataset(train=False, nominal_class=CLASS)
+    test_data = NominalMNISTImageDataset(train=False, nominal_class=CLASS)
     test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=BATCHS_SIZE, pin_memory=True)
 
-    autoencoder = AE_CIFAR10_V5().to(device)
+    autoencoder = AE_MNIST_V2().to(device)
     # print(list(autoencoder.parameters()))
     print(len(train_dataloader))
 
@@ -69,8 +70,11 @@ for CLASS in range(2, 10):
             if epoch == NUM_EPOCHS - 1:
                 plt.imshow(np.transpose(X_hat[0].cpu().detach().numpy(), (1, 2, 0)))
                 plt.show()
+                rand_img = autoencoder.decoder(torch.rand(1, 64, device=device).multiply(4).subtract(2))
+                plt.imshow(np.transpose(rand_img[0].cpu().detach().numpy(), (1, 2, 0)))
+                plt.show()
 
-            total_loss = get_loss_rec(X, X_hat) + 1e-3 * get_loss_rae(Z) + 1e-4 * get_loss_reg(autoencoder)
+            total_loss = get_loss_rec(X, X_hat) + 0 * get_loss_rae(Z) + 1e-4 * get_loss_reg(autoencoder)
 
             optimizer.zero_grad()
             total_loss.backward()
@@ -84,7 +88,7 @@ for CLASS in range(2, 10):
             X = X.to(device)
             Z, X_hat = autoencoder(X)
             rec_loss = get_loss_rec(X, X_hat)
-            total_loss = total_loss.add(torch.multiply(rec_loss + 1e-3 * get_loss_rae(Z) + 1e-4 * get_loss_reg(autoencoder), BATCHS_SIZE / len(train_data)))
+            total_loss = total_loss.add(torch.multiply(rec_loss + 0 * get_loss_rae(Z) + 1e-4 * get_loss_reg(autoencoder), BATCHS_SIZE / len(train_data)))
             total_rec_loss = total_rec_loss.add(torch.multiply(rec_loss, BATCHS_SIZE / len(train_data)))
 
         print(f'Train total loss: {total_loss.item()}')
@@ -96,10 +100,11 @@ for CLASS in range(2, 10):
             X = X.to(device)
             Z, X_hat = autoencoder(X)
             rec_loss = get_loss_rec(X, X_hat)
-            total_loss = total_loss.add(torch.multiply(rec_loss + 1e-3 * get_loss_rae(Z) + 1e-4 * get_loss_reg(autoencoder), BATCHS_SIZE / len(test_data)))
+            total_loss = total_loss.add(torch.multiply(rec_loss + 0 * get_loss_rae(Z) + 1e-4 * get_loss_reg(autoencoder), BATCHS_SIZE / len(test_data)))
             total_rec_loss = total_rec_loss.add(torch.multiply(rec_loss, BATCHS_SIZE / len(test_data)))
 
         print(f'Test total loss: {total_loss.item()}')
         print(f'Test reconstruction loss: {total_rec_loss.item()}')
 
-        torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_V5_{CLASS}')
+        if SAVE_MODEL:
+            torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_{CLASS}')
