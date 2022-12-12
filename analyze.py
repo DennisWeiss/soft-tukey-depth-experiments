@@ -10,12 +10,12 @@ import matplotlib.pyplot as plt
 from DataLoader import NominalMNISTImageDataset, AnomalousMNISTImageDataset, NominalCIFAR10ImageDataset, \
     AnomalousCIFAR10ImageDataset
 
-CLASS = 1
-RESULT_NAME_DESC = 'temp1_fulldata'
-RUN = 0
+CLASS = 4
+RESULT_NAME_DESC = '2000_64_temp0.1'
+RUN = 1
 
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
 
 
 for type, data in [['Nominal', data0], ['Anomalous', data1]]:

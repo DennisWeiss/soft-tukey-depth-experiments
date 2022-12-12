@@ -8,14 +8,14 @@ import sys
 import os
 
 
-CLASS = 7
-RESULT_NAME_DESC = '2000_32_temp0.5'
+CLASS = 6
+RESULT_NAME_DESC = '3000_256_temp0.1'
 RUN = 0
 
-result_path = f'results/MNIST_Autoencoder_class{CLASS}_{RESULT_NAME_DESC}_run{RUN}/'
+result_path = f'results/CIFAR10_Autoencoder_class{CLASS}_{RESULT_NAME_DESC}_run{RUN}/'
 
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Autoencoder_Nominal_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_MNIST_Autoencoder_Anomalous_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
 
 tukey_depths = []
 
