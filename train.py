@@ -26,7 +26,7 @@ import scipy as sp
 DATASET_NAME = 'CIFAR10_Autoencoder'
 NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
-RESULT_NAME_DESC = '3000_256_temp0.1'
+RESULT_NAME_DESC = 'kldiv_8x_30epochs'
 DATA_SIZE = 2000
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
@@ -34,13 +34,13 @@ TEST_ANOMALOUS_SIZE = 1000
 
 USE_CUDA_IF_AVAILABLE = True
 BATCH_SIZE = 2000
-ENCODER_LEARNING_RATE = 3e-4
+ENCODER_LEARNING_RATE = 1e-3
 HALFSPACE_OPTIMIZER_LEARNING_RATE = 1e+3
 KERNEL_BANDWIDTH = 0.05
-SOFT_TUKEY_DEPTH_TEMP = 0.1
+SOFT_TUKEY_DEPTH_TEMP = 0.2
 ENCODING_DIM = 64
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 10
+NUM_EPOCHS = 30
 STD_ITERATIONS = 10
 RUNS = 3
 
@@ -77,6 +77,16 @@ def soft_tukey_depth_v2(X_, X, Z, temp):
     dot_products = X_diff.mul(Z.repeat(X.size(dim=0), 1, 1).transpose(0, 1)).sum(dim=2)
     dot_products_normalized = dot_products.transpose(0, 1).divide(temp * Z.norm(dim=1))
     return torch.sigmoid(dot_products_normalized).sum(dim=0).divide(X.size(dim=0))
+
+
+def get_kl_divergence(soft_tukey_depths, f, kernel_bandwidth, epsilon=0.0):
+    DELTA = 0.005
+    kl_divergence = torch.tensor(0)
+    for x in torch.arange(0, 0.5, DELTA):
+        val = torch.exp(torch.square(soft_tukey_depths - x).divide(torch.tensor(-2 * kernel_bandwidth * kernel_bandwidth))).mean()
+        f_val = f(x)
+        kl_divergence = kl_divergence.subtract(torch.multiply(torch.tensor(f_val * DELTA), torch.log(val.divide(f_val + epsilon))))
+    return kl_divergence
 
 
 def get_kth_moment_uniform_distribution(k, b):
@@ -134,7 +144,7 @@ def draw_scatter_plot(X, z_params):
 
 
 for run in range(RUNS):
-    for NOMINAL_CLASS in range(6, 7):
+    for NOMINAL_CLASS in range(0, 6):
         train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True), list(range(DATA_SIZE)))
         train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE)
         train_dataloader_full_data = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
@@ -148,7 +158,7 @@ for run in range(RUNS):
         encoder = CIFAR10_AE_Encoder().to(device)
         encoder.train()
 
-        optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=ENCODER_LEARNING_RATE, weight_decay=1e-2)
+        optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=ENCODER_LEARNING_RATE)
 
         # z = [torch.ones(X.size(dim=1), device=device) for i in range(X.size(dim=0))]
         # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
@@ -187,11 +197,14 @@ for run in range(RUNS):
                     print(f'Variance: {var.item()}')
                     mean_td = tds.mean()
                     print(f'Mean: {mean_td.item()}')
-                    (-var).backward()
+                    # (-var).backward()
                     # (-mean_td).backward()
+                    kl_div = get_kl_divergence(tds, lambda x: 8*x, 0.05, 1e-3)
+                    print(f'KL divergence: {kl_div.item()}')
+                    kl_div.backward()
                     optimizer_encoder.step()
 
-                    # draw_histogram(Y_train, Y, z_params, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
+                    draw_histogram(Y_train, Y, z_params, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
 
                 # for l in range(1):
                 #     X_rand = torch.rand(BATCH_SIZE, 512, device=device).multiply(1).subtract(0.5)
@@ -288,9 +301,9 @@ for run in range(RUNS):
                 _soft_tukey_depth = soft_tukey_depth_v2(Y_test_nominal.detach(), Y.detach(), z_test_nominal, SOFT_TUKEY_DEPTH_TEMP)
                 soft_tukey_depths += _soft_tukey_depth.tolist()
 
-                if ENCODING_DIM == 2:
-                    draw_scatter_plot(Y_test_nominal, z_test_nominal)
-                draw_histogram(Y_test_nominal, Y, z_test_nominal, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
+                # if ENCODING_DIM == 2:
+                #     draw_scatter_plot(Y_test_nominal, z_test_nominal)
+                # draw_histogram(Y_test_nominal, Y, z_test_nominal, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
 
             writer = csv.writer(open(
                 f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}.csv',
@@ -313,9 +326,9 @@ for run in range(RUNS):
                 _soft_tukey_depth = soft_tukey_depth_v2(Y_test_anomalous.detach(), Y.detach(), z_test_anomalous, SOFT_TUKEY_DEPTH_TEMP)
                 soft_tukey_depths += _soft_tukey_depth.tolist()
 
-                if ENCODING_DIM == 2:
-                    draw_scatter_plot(Y_test_anomalous, z_test_anomalous)
-                draw_histogram(Y_test_anomalous, Y, z_test_anomalous, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
+                # if ENCODING_DIM == 2:
+                #     draw_scatter_plot(Y_test_anomalous, z_test_anomalous)
+                # draw_histogram(Y_test_anomalous, Y, z_test_anomalous, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
 
             writer = csv.writer(open(
                 f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}.csv',

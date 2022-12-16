@@ -92,7 +92,7 @@ class NominalCIFAR10AutoencoderDataset(Dataset):
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
 
-        self.data_latent = torch.load(f"./representations/CIFAR10_AE_representation/AE_CIFAR10_V5_{'train' if train else 'test'}_{nominal_class}", map_location=device)
+        self.data_latent = torch.load(f"./representations/CIFAR10_AE_representation/VAE_CIFAR10_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
     def __getitem__(self, item):
         return self.data_latent[self.indices[item % len(self.indices)]][0]
@@ -112,7 +112,7 @@ class AnomalousCIFAR10AutoencoderDataset(Dataset):
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
 
-        self.data_latent = torch.load(f"./representations/CIFAR10_AE_representation/AE_CIFAR10_V5_{'train' if train else 'test'}_{nominal_class}", map_location=device)
+        self.data_latent = torch.load(f"./representations/CIFAR10_AE_representation/VAE_CIFAR10_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
     def __getitem__(self, item):
         return self.data_latent[self.indices[item % len(self.indices)]][0]

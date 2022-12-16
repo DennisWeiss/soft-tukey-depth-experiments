@@ -8,6 +8,7 @@ from models.AE_CIFAR10_V5 import AE_CIFAR10_V5
 from models.AE_MNIST import AE_MNIST
 from models.AE_MNIST_V2 import AE_MNIST_V2
 from models.AE_MNIST_V3 import AE_MNIST_V3
+from models.VAE_CIFAR10 import VAE_CIFAR10
 from preprocessing import get_target_label_idx, global_contrast_normalization
 
 
@@ -36,37 +37,44 @@ min_max_mnist = [(-0.8826567065619495, 9.001545489292527),
 
 min_max_mnist_all = (-0.8826567065619495, 20.108062262467364)
 
-for nominal_class in range(0, 10):
-    data = torchvision.datasets.MNIST(
+for nominal_class in range(0, 1):
+    # data = torchvision.datasets.MNIST(
+    #     'datasets',
+    #     train=TRAIN,
+    #     download=True,
+    #     transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
+    #                                               torchvision.transforms.Lambda(
+    #                                                   lambda x: global_contrast_normalization(x, scale='l1')),
+    #                                               torchvision.transforms.Normalize([(
+    #                                                                                     min_max_mnist_all if nominal_class == 'all' else
+    #                                                                                     min_max_mnist[nominal_class])[
+    #                                                                                     0]],
+    #                                                                                [(
+    #                                                                                     min_max_mnist_all if nominal_class == 'all' else
+    #                                                                                     min_max_mnist[nominal_class])[
+    #                                                                                     1] - (
+    #                                                                                     min_max_mnist_all if nominal_class == 'all' else
+    #                                                                                     min_max_mnist[nominal_class])[
+    #                                                                                     0]])])
+    # )
+
+    data = torchvision.datasets.CIFAR10(
         'datasets',
         train=TRAIN,
         download=True,
-        transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
-                                                  torchvision.transforms.Lambda(
-                                                      lambda x: global_contrast_normalization(x, scale='l1')),
-                                                  torchvision.transforms.Normalize([(
-                                                                                        min_max_mnist_all if nominal_class == 'all' else
-                                                                                        min_max_mnist[nominal_class])[
-                                                                                        0]],
-                                                                                   [(
-                                                                                        min_max_mnist_all if nominal_class == 'all' else
-                                                                                        min_max_mnist[nominal_class])[
-                                                                                        1] - (
-                                                                                        min_max_mnist_all if nominal_class == 'all' else
-                                                                                        min_max_mnist[nominal_class])[
-                                                                                        0]])])
+        transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
     )
 
-    data_latent = torch.zeros(len(data), 1, 64)
+    data_latent = torch.zeros(len(data), 1, 512)
 
     dataloader = torch.utils.data.DataLoader(data)
-    autoencoder = AE_MNIST_V2().to(device)
-    autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MNIST_{nominal_class}'))
+    autoencoder = VAE_CIFAR10().to(device)
+    autoencoder.load_state_dict(torch.load(f'./snapshots/VAE_CIFAR10_{nominal_class}'))
     autoencoder.eval()
 
     for step, x in enumerate(dataloader):
         x[0] = x[0].to(device)
-        z, x_hat = autoencoder(x[0])
-        data_latent[step][0] = z.detach()
+        Z_mu, Z_std, Z, x_hat = autoencoder(x[0])
+        data_latent[step][0] = Z_mu.detach()
 
-    torch.save(data_latent, f"./representations/MNIST_AE_representation/AE_MNIST_{'train' if TRAIN else 'test'}_{nominal_class}")
+    torch.save(data_latent, f"./representations/CIFAR10_AE_representation/VAE_CIFAR10_{'train' if TRAIN else 'test'}_{nominal_class}")
