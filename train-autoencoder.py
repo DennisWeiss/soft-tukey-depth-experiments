@@ -44,34 +44,39 @@ else:
 device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_available() else 'cpu')
 print('The model will run with {}'.format(device))
 
+
+def get_loss_rec(x, x_hat):
+    return ((x - x_hat).square()).sum(axis=(2, 3)).mean()
+
+
+def get_loss_rae(z):
+    return (z.square()).sum(axis=1).mean()
+
+
+def get_loss_reg(model):
+    return sum(parameter.square().sum() for parameter in model.parameters())
+
+
+"""
+Only used for variational autoencoder
+"""
+def get_loss_kl_div_latent(Z_mu, Z_std, Z):
+    p = torch.distributions.normal.Normal(torch.zeros_like(Z_mu), torch.ones_like(Z_std))
+    q = torch.distributions.normal.Normal(Z_mu, torch.exp(Z_std))
+    return torch.sum(q.log_prob(Z) - p.log_prob(Z), dim=1).mean()
+
+
 for CLASS in range(0, 1):
     train_data = NominalCIFAR10ImageDataset(train=True, nominal_class=CLASS)
+
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCHS_SIZE, pin_memory=True)
-
     test_data = NominalCIFAR10ImageDataset(train=False, nominal_class=CLASS)
-    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=BATCHS_SIZE, pin_memory=True)
 
+    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=BATCHS_SIZE, pin_memory=True)
     autoencoder = AE_CIFAR10_V5().to(device)
     # print(list(autoencoder.parameters()))
+
     print(len(train_dataloader))
-
-    def get_loss_rec(x, x_hat):
-        return ((x - x_hat).square()).sum(axis=(2, 3)).mean()
-
-
-    def get_loss_rae(z):
-        return (z.square()).sum(axis=1).mean()
-
-
-    def get_loss_reg(model):
-        return sum(parameter.square().sum() for parameter in model.parameters())
-
-
-    def get_loss_kl_div_latent(Z_mu, Z_std, Z):
-        p = torch.distributions.normal.Normal(torch.zeros_like(Z_mu), torch.ones_like(Z_std))
-        q = torch.distributions.normal.Normal(Z_mu, torch.exp(Z_std))
-        return torch.sum(q.log_prob(Z) - p.log_prob(Z), dim=1).mean()
-
 
     optimizer = torch.optim.Adam(autoencoder.parameters(), lr=LEARNING_RATE)
 

@@ -1,6 +1,8 @@
 import torch
+import torch.nn as nn
 import torchvision
 import torch.utils.data
+import pretrainedmodels
 
 from models.AE_CIFAR10_V3 import AE_CIFAR10_V3
 from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
@@ -10,6 +12,7 @@ from models.AE_MNIST_V2 import AE_MNIST_V2
 from models.AE_MNIST_V3 import AE_MNIST_V3
 from models.VAE_CIFAR10 import VAE_CIFAR10
 from preprocessing import get_target_label_idx, global_contrast_normalization
+
 
 
 USE_CUDA_IF_AVAILABLE = True
@@ -62,19 +65,24 @@ for nominal_class in range(0, 1):
         'datasets',
         train=TRAIN,
         download=True,
-        transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+        transform=torchvision.transforms.Compose([torchvision.transforms.Resize((224, 224)), torchvision.transforms.ToTensor()])
     )
 
-    data_latent = torch.zeros(len(data), 1, 512)
+    data_latent = torch.zeros(len(data), 1, 4096)
 
     dataloader = torch.utils.data.DataLoader(data)
-    autoencoder = VAE_CIFAR10().to(device)
-    autoencoder.load_state_dict(torch.load(f'./snapshots/VAE_CIFAR10_{nominal_class}'))
-    autoencoder.eval()
+
+    # autoencoder = VAE_CIFAR10().to(device)
+    # autoencoder.load_state_dict(torch.load(f'./snapshots/VAE_CIFAR10_{nominal_class}'))
+    # autoencoder.eval()
+
+    imagenet_model = pretrainedmodels.__dict__['vgg13'](num_classes=1000, pretrained='imagenet').to(device)
+    # model = nn.Sequential(*list(imagenet_model.modules())[:-2]).to(device)
+    imagenet_model.last_linear = nn.Identity()
 
     for step, x in enumerate(dataloader):
         x[0] = x[0].to(device)
-        Z_mu, Z_std, Z, x_hat = autoencoder(x[0])
-        data_latent[step][0] = Z_mu.detach()
+        encoding = imagenet_model(x[0])
+        data_latent[step][0] = encoding.detach()
 
-    torch.save(data_latent, f"./representations/CIFAR10_AE_representation/VAE_CIFAR10_{'train' if TRAIN else 'test'}_{nominal_class}")
+    torch.save(data_latent, f"./representations/CIFAR10_AE_representation/Imagenet_Pretrained_CIFAR10_{'train' if TRAIN else 'test'}_{nominal_class}")

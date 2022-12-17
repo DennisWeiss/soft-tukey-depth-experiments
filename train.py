@@ -22,29 +22,34 @@ import torch.utils.data
 import numpy as np
 import scipy as sp
 
+from models.Wasserstein_Network import Wasserstein_Network
 
 DATASET_NAME = 'CIFAR10_Autoencoder'
 NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
-RESULT_NAME_DESC = 'kldiv_8x_30epochs'
-DATA_SIZE = 2000
+RESULT_NAME_DESC = '1800_wasserstein_30epochs'
+DATA_SIZE = 1800
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
 
 
 USE_CUDA_IF_AVAILABLE = True
-BATCH_SIZE = 2000
-ENCODER_LEARNING_RATE = 1e-3
+BATCH_SIZE = 1800
+ENCODER_LEARNING_RATE = 1e-4
 HALFSPACE_OPTIMIZER_LEARNING_RATE = 1e+3
+WASSERSTEIN_NETWORK_LEARNING_RATE = 1e-2
 KERNEL_BANDWIDTH = 0.05
 SOFT_TUKEY_DEPTH_TEMP = 0.2
 ENCODING_DIM = 64
 HISTOGRAM_BINS = 50
 NUM_EPOCHS = 30
 STD_ITERATIONS = 10
+WASSERSTEIN_ITERATIONS = 10
 RUNS = 3
 
+
 torch.autograd.set_detect_anomaly(True)
+torch.set_printoptions(precision=4, sci_mode=False)
 
 if torch.cuda.is_available():
     print('GPU is available with the following device: {}'.format(torch.cuda.get_device_name()))
@@ -91,6 +96,18 @@ def get_kl_divergence(soft_tukey_depths, f, kernel_bandwidth, epsilon=0.0):
 
 def get_kth_moment_uniform_distribution(k, b):
     return torch.pow(torch.tensor(b), torch.tensor(k+1)).divide(torch.tensor(b*(k+1)))
+
+
+def get_wasserstein_loss(wasserstein_network, soft_tukey_depths):
+    soft_tukey_depths_reshaped = soft_tukey_depths.detach().reshape(-1, 1)
+    return wasserstein_network(soft_tukey_depths_reshaped).mean() - wasserstein_network(0.5 * torch.rand_like(soft_tukey_depths_reshaped)).mean()
+
+
+def clip_weights(model, val):
+    for name, param in model.named_parameters():
+        if 'weight' in name:
+            with torch.no_grad():
+                param.clamp_(-val, val)
 
 
 def draw_histogram(X, X_, z_params, temp, bins=200):
@@ -160,6 +177,11 @@ for run in range(RUNS):
 
         optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=ENCODER_LEARNING_RATE)
 
+        # wasserstein_network = Wasserstein_Network().to(device)
+        # wasserstein_network.train()
+        #
+        # optimizer_wasserstein_network = torch.optim.Adam(wasserstein_network.parameters(), lr=WASSERSTEIN_NETWORK_LEARNING_RATE)
+
         # z = [torch.ones(X.size(dim=1), device=device) for i in range(X.size(dim=0))]
         # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
         z_params = torch.nn.Parameter(torch.rand(len(train_data), ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)))
@@ -186,88 +208,36 @@ for run in range(RUNS):
                         optimizer_z.step()
                     # print(j, z_params[j])
 
-                optimizer_encoder.zero_grad()
-
                 for step2, X_train in enumerate(train_dataloader_full_data):
                     X_train = X_train.to(device)
                     Y_train = encoder(X_train)
 
                     tds = soft_tukey_depth_v2(Y_train, Y, z_params.detach(), SOFT_TUKEY_DEPTH_TEMP)
+
+                    # for j in range(WASSERSTEIN_ITERATIONS):
+                    #     optimizer_wasserstein_network.zero_grad()
+                    #     wasserstein_loss = get_wasserstein_loss(wasserstein_network, tds)
+                    #     (-wasserstein_loss).backward()
+                    #     optimizer_wasserstein_network.step()
+                    #     clip_weights(wasserstein_network, 1)
+
+                    optimizer_encoder.zero_grad()
+
                     var = torch.var(tds)
                     print(f'Variance: {var.item()}')
                     mean_td = tds.mean()
                     print(f'Mean: {mean_td.item()}')
                     # (-var).backward()
                     # (-mean_td).backward()
-                    kl_div = get_kl_divergence(tds, lambda x: 8*x, 0.05, 1e-3)
+                    kl_div = get_kl_divergence(tds, lambda x: x, 0.05, 1e-3)
+                    # wasserstein_loss = get_wasserstein_loss(wasserstein_network, tds)
                     print(f'KL divergence: {kl_div.item()}')
+                    # print(f'Wasserstein loss: {wasserstein_loss.item()}')
                     kl_div.backward()
+                    # wasserstein_loss.backward()
                     optimizer_encoder.step()
 
                     draw_histogram(Y_train, Y, z_params, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
-
-                # for l in range(1):
-                #     X_rand = torch.rand(BATCH_SIZE, 512, device=device).multiply(1).subtract(0.5)
-                #     Y_rand = encoder(X_rand)
-                #
-                #     z_rand = torch.nn.Parameter(torch.rand(BATCH_SIZE, ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)))
-                #     z_rand_optim = torch.optim.SGD([z_rand], lr=HALFSPACE_OPTIMIZER_LEARNING_RATE)
-                #
-                #     for k in range(2*STD_ITERATIONS):
-                #         z_rand_optim.zero_grad()
-                #         for step2, X_train in enumerate(train_dataloader_full_data):
-                #             X_train = X_train.to(device)
-                #             Y_train = encoder(X_train)
-                #
-                #             _soft_tukey_depth = soft_tukey_depth_v2(Y_rand.detach(), Y_train.detach(), z_rand, SOFT_TUKEY_DEPTH_TEMP)
-                #             _soft_tukey_depth.sum().backward()
-                #             z_rand_optim.step()
-                #
-                #     for step2, X_train in enumerate(train_dataloader_full_data):
-                #         X_train = X_train.to(device)
-                #         Y_train = encoder(X_train)
-                #
-                #         tds = soft_tukey_depth_v2(Y_rand, Y_train.detach(), z_rand, SOFT_TUKEY_DEPTH_TEMP)
-                #         mean_td = tds.mean()
-                #         print(f'Random mean: {mean_td.item()}')
-                #         (mean_td).backward()
-                #         optimizer_encoder.step()
-
-                # print(f'Total norm: {torch.linalg.norm(Y, dim=1).sum().item()}')
-                # print(f'Total point value: {Y.sum(dim=0).sum()}')
-                # ((0 * -var).add(1e+4 * (torch.square(torch.linalg.norm(Y, dim=1).sum().subtract(DATA_SIZE)))).add(1e+3 * torch.square(Y.sum(dim=0)).sum())).backward()
-
-                # avg_soft_tukey_depth = torch.tensor(0)
-                #
-                # for j in range(Y.size(dim=0)):
-                #     avg_soft_tukey_depth = avg_soft_tukey_depth.add(
-                #         soft_tukey_depth(Y[j], Y, z_params[step * BATCH_SIZE + j], SOFT_TUKEY_DEPTH_TEMP).divide(Y.size(dim=0) ** 2))
-                #
-                # Y_mean = Y.mean(dim=0)
-                # Y_centered = Y.subtract(Y_mean)
-                #
-                # avg_latent_norm = torch.norm(Y_centered, dim=1).mean()
-                # norm_1_diff = torch.square(avg_latent_norm - torch.tensor(1))
-                #
-                # # outlyingness_loss = torch.relu(torch.norm(Y_centered, dim=1).subtract(torch.tensor(1))).mean()
-                #
-                # loss = -avg_soft_tukey_depth + 3e-1 * norm_1_diff
-                # loss.backward()
-                # print(f'Avg soft Tukey depth: {avg_soft_tukey_depth.item()}')
-                # print(f'Avg latent norm: {avg_latent_norm.item()}')
-                # print(f'Outlyingness loss: {outlyingness_loss.item()}')
-                # print(f'Loss: {loss.item()}')
-
-                # moment_loss = get_moment_loss(Y, z_params, 3)
-                # print(f'Moment loss: {moment_loss.item()}')
-                # moment_loss.backward()
-
-                # kl_divergence = get_kl_divergence(Y, z_params, 0.1)
-                # print(f'KL divergence: {kl_divergence.item()}')
-                # kl_divergence.backward()
-
-                # inverse_sum_loss = get_inverse_sum_soft_tukey_depth(Y, z_params)
-                # (inverse_sum_loss).backward()
 
                 if i % 1 == 0:
                     if ENCODING_DIM == 2:
