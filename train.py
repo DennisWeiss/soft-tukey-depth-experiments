@@ -6,6 +6,7 @@ from DataLoader import NominalMNISTImageDataset, AnomalousMNISTImageDataset, Nom
     AnomalousCIFAR10ImageDataset, NominalCIFAR10AutoencoderDataset, AnomalousCIFAR10AutoencoderDataset, \
     NominalMNISTAutoencoderDataset, AnomalousMNISTAutoencoderDataset, NominalMNISTAutoencoderCachedDataset, \
     AnomalousMNISTAutoencoderCachedDataset
+from models.AE_CIFAR10_V6 import AE_CIFAR10_V6
 from models.CIFAR10_AE_Encoder import CIFAR10_AE_Encoder
 from models.CIFAR10_AE_Encoder_V2 import CIFAR10_AE_Encoder_V2
 from models.CIFAR10_Encoder_V4 import CIFAR10_Encoder_V4
@@ -24,28 +25,28 @@ import scipy as sp
 
 from models.Wasserstein_Network import Wasserstein_Network
 
-DATASET_NAME = 'CIFAR10_Autoencoder'
+DATASET_NAME = 'CIFAR10'
 NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
-RESULT_NAME_DESC = '1800_wasserstein_30epochs'
-DATA_SIZE = 1800
+RESULT_NAME_DESC = 'kldiv_2000_dim4_unif_temp0.02_lr1e-3_20epochs'
+DATA_SIZE = 2000
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
 
 
 USE_CUDA_IF_AVAILABLE = True
-BATCH_SIZE = 1800
-ENCODER_LEARNING_RATE = 1e-4
+BATCH_SIZE = 2000
+ENCODER_LEARNING_RATE = 1e-3
 HALFSPACE_OPTIMIZER_LEARNING_RATE = 1e+3
 WASSERSTEIN_NETWORK_LEARNING_RATE = 1e-2
 KERNEL_BANDWIDTH = 0.05
-SOFT_TUKEY_DEPTH_TEMP = 0.2
-ENCODING_DIM = 64
+SOFT_TUKEY_DEPTH_TEMP = 0.02
+ENCODING_DIM = 16
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 30
+NUM_EPOCHS = 20
 STD_ITERATIONS = 10
 WASSERSTEIN_ITERATIONS = 10
-RUNS = 3
+RUNS = 1
 
 
 torch.autograd.set_detect_anomaly(True)
@@ -161,7 +162,7 @@ def draw_scatter_plot(X, z_params):
 
 
 for run in range(RUNS):
-    for NOMINAL_CLASS in range(0, 6):
+    for NOMINAL_CLASS in range(0, 1):
         train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True), list(range(DATA_SIZE)))
         train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE)
         train_dataloader_full_data = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
@@ -174,6 +175,11 @@ for run in range(RUNS):
 
         encoder = CIFAR10_AE_Encoder().to(device)
         encoder.train()
+
+        # autoencoder = AE_CIFAR10_V6().to(device)
+        # autoencoder.load_state_dict(torch.load(f'./snapshots/AE_V6_CIFAR10_{NOMINAL_CLASS}'))
+        #
+        # encoder.load_weights_from_pretrained_autoencoder(autoencoder)
 
         optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=ENCODER_LEARNING_RATE)
 
@@ -229,7 +235,7 @@ for run in range(RUNS):
                     print(f'Mean: {mean_td.item()}')
                     # (-var).backward()
                     # (-mean_td).backward()
-                    kl_div = get_kl_divergence(tds, lambda x: x, 0.05, 1e-3)
+                    kl_div = get_kl_divergence(tds, lambda x: 2, 0.05, 1e-3)
                     # wasserstein_loss = get_wasserstein_loss(wasserstein_network, tds)
                     print(f'KL divergence: {kl_div.item()}')
                     # print(f'Wasserstein loss: {wasserstein_loss.item()}')
@@ -252,7 +258,7 @@ for run in range(RUNS):
             #     soft_tukey_depths.append(soft_tukey_depth(Y[j], Y, z_params[j]).item() / Y.size(dim=0))
             #
             # draw_histogram_tukey_depth(soft_tukey_depths, bins=HISTOGRAM_BINS)
-            svd_dim = draw_svd_plot(Y, 16, 0.01)
+            svd_dim = draw_svd_plot(Y, min(ENCODING_DIM, 16), 0.01)
             print(f'SVD dimensionality: {svd_dim}')
 
 

@@ -12,6 +12,7 @@ from models.AE_MNIST_V2 import AE_MNIST_V2
 from models.AE_MNIST_V3 import AE_MNIST_V3
 from models.VAE_CIFAR10 import VAE_CIFAR10
 from preprocessing import get_target_label_idx, global_contrast_normalization
+from transforms.RandomPermutationTransform import RandomPermutationTransform
 
 
 
@@ -40,7 +41,7 @@ min_max_mnist = [(-0.8826567065619495, 9.001545489292527),
 
 min_max_mnist_all = (-0.8826567065619495, 20.108062262467364)
 
-for nominal_class in range(0, 1):
+for nominal_class in range(0, 10):
     # data = torchvision.datasets.MNIST(
     #     'datasets',
     #     train=TRAIN,

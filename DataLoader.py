@@ -11,6 +11,7 @@ from models.AE_CIFAR10_V3 import AE_CIFAR10_V3
 from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
 from models.AE_MNIST import AE_MNIST
 from models.AE_MNIST_V2 import AE_MNIST_V2
+from models.DeepSAD import DeepSAD
 from transform import FlattenTransform
 from models.RAE_CIFAR10 import RAE_CIFAR10
 from models.RAE_MNIST import RAE_MNIST
@@ -119,6 +120,31 @@ class AnomalousCIFAR10AutoencoderDataset(Dataset):
 
     def __len__(self):
         return len(self.indices)
+
+
+class NominalCIFAR10DeepSADDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data_latent = torch.load(f"./representations/CIFAR10_AE_representation/encodings_{nominal_class}_{'train' if train else 'test_anomalous'}.pth")
+        print(f'Nominal size: {self.data_latent.size(dim=0)}')
+
+    def __getitem__(self, item):
+        return self.data_latent[item]
+
+    def __len__(self):
+        return self.data_latent.size(dim=0)
+
+
+class AnomalousCIFAR10DeepSADDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data_latent = torch.load(
+            f"./representations/CIFAR10_AE_representation/encodings_{nominal_class}_{'train' if train else 'test_nominal'}.pth")
+        print(f'Anomalous size: {self.data_latent.size(dim=0)}')
+
+    def __getitem__(self, item):
+        return self.data_latent[item]
+
+    def __len__(self):
+        return self.data_latent.size(dim=0)
 
 
 class NominalCIFAR10Dataset(Dataset):

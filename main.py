@@ -6,22 +6,24 @@ from DataLoader import NominalMNISTDataset, AnomalousMNISTDataset, NominalCIFAR1
     NominalCIFAR10ImageDataset, AnomalousCIFAR10ImageDataset, NominalCIFAR10AutoencoderDataset, \
     AnomalousCIFAR10AutoencoderDataset, NominalMNISTAutoencoderDataset, AnomalousMNISTAutoencoderDataset, \
     NominalMNISTAutoencoderAllDataset, AnomalousMNISTAutoencoderAllDataset, NominalMNISTAutoencoderCachedDataset, \
-    AnomalousMNISTAutoencoderCachedDataset, NominalMNISTImageDataset, AnomalousMNISTImageDataset
+    AnomalousMNISTAutoencoderCachedDataset, NominalMNISTImageDataset, AnomalousMNISTImageDataset, \
+    NominalCIFAR10DeepSADDataset, AnomalousCIFAR10DeepSADDataset
+from models.DeepSAD import DeepSAD
 from models.RAE_CIFAR10 import RAE_CIFAR10
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'CIFAR10_Autoencoder'
-NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
-ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
+DATASET_NAME = 'CIFAR10_DeepSAD'
+NOMINAL_DATASET = NominalCIFAR10DeepSADDataset
+ANOMALOUS_DATASET = AnomalousCIFAR10DeepSADDataset
 N_CLASSES = 10
-TUKEY_DEPTH_COMPUTATION_EPOCHS = 10
-TUKEY_DEPTH_COMPUTATIONS = 1
-SOFT_TUKEY_DEPTH_TEMP = 2
-BATCH_SIZE = 64
-TRAIN_SIZE = 5000
+TUKEY_DEPTH_COMPUTATION_EPOCHS = 20
+TUKEY_DEPTH_COMPUTATIONS = 200
+SOFT_TUKEY_DEPTH_TEMP = 0.02
+BATCH_SIZE = 128
+TRAIN_SIZE = 4992
 TEST_NOMINAL_SIZE = 1000
-TEST_ANOAMLOUS_SIZE = 1000
+TEST_ANOMALOUS_SIZE = 1000
 
 
 if torch.cuda.is_available():
@@ -33,7 +35,7 @@ device = torch.device('cuda' if USE_CUDA_IF_AVAILABLE and torch.cuda.is_availabl
 print('The model will run with {}'.format(device))
 
 
-def soft_tukey_depth_v2(X_, X, Z, temp):
+def soft_tukey_depth(X_, X, Z, temp):
     X_new = X.repeat(X_.size(dim=0), 1, 1)
     X_new_tr = X_.repeat(X.size(dim=0), 1, 1).transpose(0, 1)
     X_diff = X_new - X_new_tr
@@ -45,7 +47,7 @@ def soft_tukey_depth_v2(X_, X, Z, temp):
 for i in range(0, 1):
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=True), list(range(TRAIN_SIZE)))
     test_data_nominal = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=False), list(range(TEST_NOMINAL_SIZE)))
-    test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=i, train=False), list(range(TEST_ANOAMLOUS_SIZE)))
+    test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=i, train=False), list(range(TEST_ANOMALOUS_SIZE)))
 
     test_dataloader_nominal = torch.utils.data.DataLoader(test_data_nominal, batch_size=BATCH_SIZE)
     test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=BATCH_SIZE)
@@ -53,10 +55,6 @@ for i in range(0, 1):
 
     for test_dataloader, type in [(test_dataloader_nominal, 'Nominal'), (test_dataloader_anomalous, 'Anomalous')]:
         soft_tukey_depths = []
-
-        def soft_tukey_depth(x, x_, z):
-            return torch.sum(torch.sigmoid(torch.multiply(torch.tensor(1 / SOFT_TUKEY_DEPTH_TEMP), torch.divide(torch.matmul(torch.subtract(x_, torch.matmul(torch.ones((x_.size(dim=0), 1), device=device), x)), z), torch.norm(z)))))
-
 
         for item, x in enumerate(test_dataloader):
             x = x.to(device)
@@ -66,18 +64,25 @@ for i in range(0, 1):
             for item2, x2 in enumerate(train_dataloader):
                 x2 = x2.to(device)
                 x2_detached = x2.detach()
+                # print(torch.norm(x2.mean(dim=0)))
+                #
+                # model_dict = torch.load('model.tar')
+                #
+                # c = torch.tensor(model_dict['c'], device=device)
+                # print(torch.norm(c))
+
                 for j in range(TUKEY_DEPTH_COMPUTATIONS):
                     z = torch.nn.Parameter(torch.rand(x.size(dim=0), x.size(dim=1), device=device))
-                    optimizer = torch.optim.SGD([z], lr=300)
+                    optimizer = torch.optim.SGD([z], lr=30)
                     for k in range(TUKEY_DEPTH_COMPUTATION_EPOCHS):
-                        _soft_tukey_depth = soft_tukey_depth_v2(x_detached, x2_detached, z, SOFT_TUKEY_DEPTH_TEMP)
+                        _soft_tukey_depth = soft_tukey_depth(x_detached, x2_detached, z, SOFT_TUKEY_DEPTH_TEMP)
                         _soft_tukey_depth.sum().backward()
                         optimizer.step()
                         del _soft_tukey_depth
 
 
-                    _soft_tukey_depth = soft_tukey_depth_v2(x_detached, x2_detached, z, SOFT_TUKEY_DEPTH_TEMP)
-                    min_tukey_depth = torch.minimum(min_tukey_depth, _soft_tukey_depth)
+                    _soft_tukey_depth = soft_tukey_depth(x_detached, x2_detached, z, SOFT_TUKEY_DEPTH_TEMP)
+                    min_tukey_depth = torch.minimum(min_tukey_depth, _soft_tukey_depth.detach())
                     del z
                     del _soft_tukey_depth
                     torch.cuda.empty_cache()
@@ -86,13 +91,13 @@ for i in range(0, 1):
             print(f'Mean TD is {min_tukey_depth.mean().item()}')
 
             for j in range(x.size(dim=0)):
-                print(f"Item {item * BATCH_SIZE + j + 1}/{TEST_NOMINAL_SIZE if type == 'Nominal' else TEST_ANOAMLOUS_SIZE}")
+                print(f"Item {item * BATCH_SIZE + j + 1}/{TEST_NOMINAL_SIZE if type == 'Nominal' else TEST_ANOMALOUS_SIZE}")
                 soft_tukey_depths.append(min_tukey_depth[j].item())
                 print(f'Soft tukey depth is {min_tukey_depth[j].item()}')
 
         print(soft_tukey_depths)
 
-        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{type}_temp2_{i}.csv', 'w'))
+        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{type}_temp0.02_{i}.csv', 'w'))
         writer.writerow(soft_tukey_depths)
 
 

@@ -9,7 +9,6 @@ class CIFAR10_Encoder_V4(nn.Module):
         # Input size: [batch, 3, 32, 32]
         # Output size: [batch, 3, 32, 32]
 
-
         self.encoder = nn.Sequential(
             nn.Conv2d(3, 12, 4, stride=2, padding=1),  # [batch, 12, 16, 16]
             nn.BatchNorm2d(12, eps=1e-4, affine=False),
@@ -21,7 +20,9 @@ class CIFAR10_Encoder_V4(nn.Module):
             nn.BatchNorm2d(48, eps=1e-4, affine=False),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(48 * 4 * 4, 256)
+            nn.Linear(48 * 4 * 4, 256),
+            nn.ReLU(),
+            nn.Linear(256, 32)
         )
 
     def forward(self, x):
