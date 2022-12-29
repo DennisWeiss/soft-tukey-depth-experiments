@@ -452,7 +452,7 @@ class NominalMNISTAutoencoderCachedDataset(Dataset):
                                                            min_max_mnist[nominal_class][0]])])
         )
 
-        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/AE_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
+        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/AE_V3_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
 
@@ -478,7 +478,7 @@ class AnomalousMNISTAutoencoderCachedDataset(Dataset):
                                                            min_max_mnist[nominal_class][0]])])
         )
 
-        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/AE_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
+        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/AE_V3_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
 

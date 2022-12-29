@@ -12,7 +12,7 @@ class MNIST_AE_Encoder_V2(nn.Module):
             nn.ReLU(),
             nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Linear(64, 32)
+            nn.Linear(64, 64)
         )
 
     def forward(self, x):

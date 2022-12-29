@@ -4,6 +4,7 @@ from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
 from models.AE_CIFAR10_V5 import AE_CIFAR10_V5
 from models.AE_CIFAR10_V6 import AE_CIFAR10_V6
 from models.AE_MNIST_V2 import AE_MNIST_V2
+from models.AE_MNIST_V3 import AE_MNIST_V3
 from models.MVTec_AE import MVTec_AE
 from models.RAE_CIFAR10 import RAE_CIFAR10
 from models.RAE_MNIST import RAE_MNIST
@@ -22,11 +23,11 @@ from models.resnet import ResNet50
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'CIFAR10'
+DATASET_NAME = 'MNIST'
 SAVE_MODEL = True
 # CLASS = 0
 NUM_EPOCHS = 200
-BATCHS_SIZE = 64
+BATCH_SIZE = 64
 LEARNING_RATE = 3e-4
 
 
@@ -67,14 +68,14 @@ def get_loss_kl_div_latent(Z_mu, Z_std, Z):
     return torch.sum(q.log_prob(Z) - p.log_prob(Z), dim=1).mean()
 
 
-for CLASS in range(1, 2):
-    train_data = NominalCIFAR10ImageDataset(train=True, nominal_class=CLASS)
+for CLASS in range(8, 10):
+    train_data = NominalMNISTImageDataset(train=True, nominal_class=CLASS)
 
-    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCHS_SIZE, pin_memory=True)
-    test_data = NominalCIFAR10ImageDataset(train=False, nominal_class=CLASS)
+    train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE, pin_memory=True)
+    test_data = NominalMNISTImageDataset(train=False, nominal_class=CLASS)
 
-    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=BATCHS_SIZE, pin_memory=True)
-    autoencoder = AE_CIFAR10_V6().to(device)
+    test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=BATCH_SIZE, pin_memory=True)
+    autoencoder = AE_MNIST_V3().to(device)
     # print(list(autoencoder.parameters()))
 
     print(len(train_dataloader))
@@ -112,8 +113,8 @@ for CLASS in range(1, 2):
             Z, X_hat = autoencoder(X)
             rec_loss = get_loss_rec(X, X_hat)
             # kl_div_loss = get_loss_kl_div_latent(Z_mu, Z_std, Z)
-            total_loss = total_loss.add(torch.multiply(rec_loss + 1e-4 * get_loss_rae(Z) + 1e-5 * get_loss_reg(autoencoder), BATCHS_SIZE / len(train_data)))
-            total_rec_loss = total_rec_loss.add(torch.multiply(rec_loss, BATCHS_SIZE / len(train_data)))
+            total_loss = total_loss.add(torch.multiply(rec_loss + 1e-4 * get_loss_rae(Z) + 1e-5 * get_loss_reg(autoencoder), BATCH_SIZE / len(train_data)))
+            total_rec_loss = total_rec_loss.add(torch.multiply(rec_loss, BATCH_SIZE / len(train_data)))
             # total_kl_div_loss = total_kl_div_loss.add(torch.multiply(kl_div_loss, BATCHS_SIZE / len(train_data)))
 
         print(f'Train total loss: {total_loss.item()}')
@@ -128,8 +129,8 @@ for CLASS in range(1, 2):
             Z, X_hat = autoencoder(X)
             rec_loss = get_loss_rec(X, X_hat)
             # kl_div_loss = get_loss_kl_div_latent(Z_mu, Z_std, Z)
-            total_loss = total_loss.add(torch.multiply(rec_loss + 1e-4 * get_loss_rae(Z) + 1e-5 * get_loss_reg(autoencoder), BATCHS_SIZE / len(test_data)))
-            total_rec_loss = total_rec_loss.add(torch.multiply(rec_loss, BATCHS_SIZE / len(test_data)))
+            total_loss = total_loss.add(torch.multiply(rec_loss + 1e-4 * get_loss_rae(Z) + 1e-5 * get_loss_reg(autoencoder), BATCH_SIZE / len(test_data)))
+            total_rec_loss = total_rec_loss.add(torch.multiply(rec_loss, BATCH_SIZE / len(test_data)))
             # total_kl_div_loss = total_kl_div_loss.add(torch.multiply(kl_div_loss, BATCHS_SIZE / len(test_data)))
 
         print(f'Test total loss: {total_loss.item()}')
@@ -137,4 +138,4 @@ for CLASS in range(1, 2):
         # print(f'Test KL divergence loss: {total_kl_div_loss.item()}')
 
         if SAVE_MODEL:
-            torch.save(autoencoder.state_dict(), f'./snapshots/AE_V6_{DATASET_NAME}_{CLASS}')
+            torch.save(autoencoder.state_dict(), f'./snapshots/AE_V3_{DATASET_NAME}_{CLASS}')

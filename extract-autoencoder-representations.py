@@ -17,7 +17,7 @@ from transforms.RandomPermutationTransform import RandomPermutationTransform
 
 
 USE_CUDA_IF_AVAILABLE = True
-TRAIN = False
+TRAIN = True
 
 if torch.cuda.is_available():
     print('GPU is available with the following device: {}'.format(torch.cuda.get_device_name()))
@@ -42,48 +42,48 @@ min_max_mnist = [(-0.8826567065619495, 9.001545489292527),
 min_max_mnist_all = (-0.8826567065619495, 20.108062262467364)
 
 for nominal_class in range(0, 10):
-    # data = torchvision.datasets.MNIST(
-    #     'datasets',
-    #     train=TRAIN,
-    #     download=True,
-    #     transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
-    #                                               torchvision.transforms.Lambda(
-    #                                                   lambda x: global_contrast_normalization(x, scale='l1')),
-    #                                               torchvision.transforms.Normalize([(
-    #                                                                                     min_max_mnist_all if nominal_class == 'all' else
-    #                                                                                     min_max_mnist[nominal_class])[
-    #                                                                                     0]],
-    #                                                                                [(
-    #                                                                                     min_max_mnist_all if nominal_class == 'all' else
-    #                                                                                     min_max_mnist[nominal_class])[
-    #                                                                                     1] - (
-    #                                                                                     min_max_mnist_all if nominal_class == 'all' else
-    #                                                                                     min_max_mnist[nominal_class])[
-    #                                                                                     0]])])
-    # )
-
-    data = torchvision.datasets.CIFAR10(
+    data = torchvision.datasets.MNIST(
         'datasets',
         train=TRAIN,
         download=True,
-        transform=torchvision.transforms.Compose([torchvision.transforms.Resize((224, 224)), torchvision.transforms.ToTensor()])
+        transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
+                                                  torchvision.transforms.Lambda(
+                                                      lambda x: global_contrast_normalization(x, scale='l1')),
+                                                  torchvision.transforms.Normalize([(
+                                                                                        min_max_mnist_all if nominal_class == 'all' else
+                                                                                        min_max_mnist[nominal_class])[
+                                                                                        0]],
+                                                                                   [(
+                                                                                        min_max_mnist_all if nominal_class == 'all' else
+                                                                                        min_max_mnist[nominal_class])[
+                                                                                        1] - (
+                                                                                        min_max_mnist_all if nominal_class == 'all' else
+                                                                                        min_max_mnist[nominal_class])[
+                                                                                        0]])])
     )
 
-    data_latent = torch.zeros(len(data), 1, 4096)
+    # data = torchvision.datasets.CIFAR10(
+    #     'datasets',
+    #     train=TRAIN,
+    #     download=True,
+    #     transform=torchvision.transforms.Compose([torchvision.transforms.Resize((224, 224)), torchvision.transforms.ToTensor()])
+    # )
+
+    data_latent = torch.zeros(len(data), 1, 64)
 
     dataloader = torch.utils.data.DataLoader(data)
 
-    # autoencoder = VAE_CIFAR10().to(device)
-    # autoencoder.load_state_dict(torch.load(f'./snapshots/VAE_CIFAR10_{nominal_class}'))
-    # autoencoder.eval()
+    autoencoder = AE_MNIST_V3().to(device)
+    autoencoder.load_state_dict(torch.load(f'./snapshots/AE_V3_MNIST_{nominal_class}'))
+    autoencoder.eval()
 
-    imagenet_model = pretrainedmodels.__dict__['vgg13'](num_classes=1000, pretrained='imagenet').to(device)
+    # imagenet_model = pretrainedmodels.__dict__['vgg13'](num_classes=1000, pretrained='imagenet').to(device)
     # model = nn.Sequential(*list(imagenet_model.modules())[:-2]).to(device)
-    imagenet_model.last_linear = nn.Identity()
+    # imagenet_model.last_linear = nn.Identity()
 
     for step, x in enumerate(dataloader):
         x[0] = x[0].to(device)
-        encoding = imagenet_model(x[0])
+        encoding, x_hat = autoencoder(x[0])
         data_latent[step][0] = encoding.detach()
 
-    torch.save(data_latent, f"./representations/CIFAR10_AE_representation/Imagenet_Pretrained_CIFAR10_{'train' if TRAIN else 'test'}_{nominal_class}")
+    torch.save(data_latent, f"./representations/MNIST_AE_representation/AE_V3_MNIST_{'train' if TRAIN else 'test'}_{nominal_class}")

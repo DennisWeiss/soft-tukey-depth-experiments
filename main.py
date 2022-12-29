@@ -13,15 +13,15 @@ from models.RAE_CIFAR10 import RAE_CIFAR10
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'CIFAR10_DeepSAD'
-NOMINAL_DATASET = NominalCIFAR10DeepSADDataset
-ANOMALOUS_DATASET = AnomalousCIFAR10DeepSADDataset
+DATASET_NAME = 'MNIST_Autoencoder'
+NOMINAL_DATASET = NominalMNISTAutoencoderCachedDataset
+ANOMALOUS_DATASET = AnomalousMNISTAutoencoderCachedDataset
 N_CLASSES = 10
 TUKEY_DEPTH_COMPUTATION_EPOCHS = 20
-TUKEY_DEPTH_COMPUTATIONS = 200
-SOFT_TUKEY_DEPTH_TEMP = 0.02
+TUKEY_DEPTH_COMPUTATIONS = 1
+SOFT_TUKEY_DEPTH_TEMP = 0.5
 BATCH_SIZE = 128
-TRAIN_SIZE = 4992
+TRAIN_SIZE = 4000
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
 
@@ -44,7 +44,7 @@ def soft_tukey_depth(X_, X, Z, temp):
     return torch.sigmoid(dot_products_normalized).sum(dim=0).divide(X.size(dim=0))
 
 
-for i in range(0, 1):
+for i in range(2, 3):
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=True), list(range(TRAIN_SIZE)))
     test_data_nominal = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=False), list(range(TEST_NOMINAL_SIZE)))
     test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=i, train=False), list(range(TEST_ANOMALOUS_SIZE)))
@@ -97,7 +97,7 @@ for i in range(0, 1):
 
         print(soft_tukey_depths)
 
-        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{type}_temp0.02_{i}.csv', 'w'))
+        writer = csv.writer(open(f'./results/raw/soft_tukey_depths_{DATASET_NAME}_{type}_temp0.5_1iter_{i}.csv', 'w'))
         writer.writerow(soft_tukey_depths)
 
 

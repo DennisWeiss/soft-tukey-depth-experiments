@@ -7,6 +7,7 @@ from DataLoader import NominalMNISTImageDataset, AnomalousMNISTImageDataset, Nom
     NominalMNISTAutoencoderDataset, AnomalousMNISTAutoencoderDataset, NominalMNISTAutoencoderCachedDataset, \
     AnomalousMNISTAutoencoderCachedDataset
 from models.AE_CIFAR10_V6 import AE_CIFAR10_V6
+from models.AE_MNIST_V3 import AE_MNIST_V3
 from models.CIFAR10_AE_Encoder import CIFAR10_AE_Encoder
 from models.CIFAR10_AE_Encoder_V2 import CIFAR10_AE_Encoder_V2
 from models.CIFAR10_Encoder_V4 import CIFAR10_Encoder_V4
@@ -25,31 +26,33 @@ import scipy as sp
 
 from models.Wasserstein_Network import Wasserstein_Network
 
-DATASET_NAME = 'CIFAR10'
-NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
-ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
-RESULT_NAME_DESC = 'kldiv_2000_dim4_unif_temp0.02_lr1e-3_20epochs'
-DATA_SIZE = 2000
+
+DATASET_NAME = 'MNIST'
+NOMINAL_DATASET = NominalMNISTImageDataset
+ANOMALOUS_DATASET = AnomalousMNISTImageDataset
+RESULT_NAME_DESC = 'v2_kldiv_8x_1000_temp0.5_lr1e-2_30epochs'
+DATA_SIZE = 1000
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
 
 
 USE_CUDA_IF_AVAILABLE = True
-BATCH_SIZE = 2000
+BATCH_SIZE = 1000
 ENCODER_LEARNING_RATE = 1e-3
 HALFSPACE_OPTIMIZER_LEARNING_RATE = 1e+3
 WASSERSTEIN_NETWORK_LEARNING_RATE = 1e-2
+WEIGHT_DECAY = 0
 KERNEL_BANDWIDTH = 0.05
-SOFT_TUKEY_DEPTH_TEMP = 0.02
-ENCODING_DIM = 16
+SOFT_TUKEY_DEPTH_TEMP = 0.5
+ENCODING_DIM = 64
+TARGET_DISTRIBUTION = lambda x: 8*x
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 20
+NUM_EPOCHS = 30
 STD_ITERATIONS = 10
 WASSERSTEIN_ITERATIONS = 10
 RUNS = 1
 
 
-torch.autograd.set_detect_anomaly(True)
 torch.set_printoptions(precision=4, sci_mode=False)
 
 if torch.cuda.is_available():
@@ -162,7 +165,7 @@ def draw_scatter_plot(X, z_params):
 
 
 for run in range(RUNS):
-    for NOMINAL_CLASS in range(0, 1):
+    for NOMINAL_CLASS in range(2, 3):
         train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True), list(range(DATA_SIZE)))
         train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE)
         train_dataloader_full_data = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
@@ -173,7 +176,8 @@ for run in range(RUNS):
         test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=NOMINAL_CLASS, train=False), list(range(TEST_ANOMALOUS_SIZE)))
         test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=16, shuffle=True)
 
-        encoder = CIFAR10_AE_Encoder().to(device)
+        encoder = AE_MNIST_V3().to(device)
+        encoder.load_state_dict(torch.load(f'./snapshots/AE_V3_MNIST_{NOMINAL_CLASS}'))
         encoder.train()
 
         # autoencoder = AE_CIFAR10_V6().to(device)
@@ -181,7 +185,7 @@ for run in range(RUNS):
         #
         # encoder.load_weights_from_pretrained_autoencoder(autoencoder)
 
-        optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=ENCODER_LEARNING_RATE)
+        optimizer_encoder = torch.optim.Adam(encoder.parameters(), lr=ENCODER_LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
         # wasserstein_network = Wasserstein_Network().to(device)
         # wasserstein_network.train()
@@ -199,7 +203,7 @@ for run in range(RUNS):
 
             for step, X in enumerate(train_dataloader):
                 X = X.to(device)
-                Y = encoder(X)
+                Y, X_hat = encoder(X)
                 Y_detached = Y.detach()
 
                 for k in range(STD_ITERATIONS):
@@ -207,7 +211,7 @@ for run in range(RUNS):
 
                     for step2, X_train in enumerate(train_dataloader_full_data):
                         X_train = X_train.to(device)
-                        Y_train = encoder(X_train)
+                        Y_train, X_train_hat = encoder(X_train)
 
                         _soft_tukey_depth = soft_tukey_depth_v2(Y_train.detach(), Y_detached, z_params, SOFT_TUKEY_DEPTH_TEMP)
                         _soft_tukey_depth.sum().backward()
@@ -216,7 +220,7 @@ for run in range(RUNS):
 
                 for step2, X_train in enumerate(train_dataloader_full_data):
                     X_train = X_train.to(device)
-                    Y_train = encoder(X_train)
+                    Y_train, X_train_hat = encoder(X_train)
 
                     tds = soft_tukey_depth_v2(Y_train, Y, z_params.detach(), SOFT_TUKEY_DEPTH_TEMP)
 
@@ -237,7 +241,7 @@ for run in range(RUNS):
                     # (-mean_td).backward()
                     kl_div = get_kl_divergence(tds, lambda x: 2, 0.05, 1e-3)
                     # wasserstein_loss = get_wasserstein_loss(wasserstein_network, tds)
-                    print(f'KL divergence: {kl_div.item()}')
+                    # print(f'KL divergence: {kl_div.item()}')
                     # print(f'Wasserstein loss: {wasserstein_loss.item()}')
                     kl_div.backward()
                     # wasserstein_loss.backward()
@@ -251,7 +255,7 @@ for run in range(RUNS):
 
         for step, X in enumerate(train_dataloader_full_data):
             X = X.to(device)
-            Y = encoder(X)
+            Y, X_hat = encoder(X)
 
             # soft_tukey_depths = []
             # for j in range(Y.size(dim=0)):
@@ -265,7 +269,7 @@ for run in range(RUNS):
             soft_tukey_depths = []
             for step2, X_test_nominal in enumerate(test_dataloader_nominal):
                 X_test_nominal = X_test_nominal.to(device)
-                Y_test_nominal = encoder(X_test_nominal)
+                Y_test_nominal, X_test_nominal_hat = encoder(X_test_nominal)
                 z_test_nominal = torch.nn.Parameter(torch.rand(X_test_nominal.size(dim=0), ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)))
                 optimizer_z_test_nominal = torch.optim.SGD([z_test_nominal], lr=3e+1)
 
@@ -290,7 +294,7 @@ for run in range(RUNS):
 
             for step2, X_test_anomalous in enumerate(test_dataloader_anomalous):
                 X_test_anomalous = X_test_anomalous.to(device)
-                Y_test_anomalous = encoder(X_test_anomalous)
+                Y_test_anomalous, X_test_anomalous_hat = encoder(X_test_anomalous)
                 z_test_anomalous = torch.nn.Parameter(torch.rand(X_test_anomalous.size(dim=0), ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)))
                 optimizer_z_test_anomalous = torch.optim.SGD([z_test_anomalous], lr=3e+1)
 
