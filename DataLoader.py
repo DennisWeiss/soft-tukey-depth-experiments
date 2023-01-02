@@ -12,6 +12,7 @@ from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
 from models.AE_MNIST import AE_MNIST
 from models.AE_MNIST_V2 import AE_MNIST_V2
 from models.DeepSAD import DeepSAD
+from models.MVTec_AE import MVTec_AE
 from transform import FlattenTransform
 from models.RAE_CIFAR10 import RAE_CIFAR10
 from models.RAE_MNIST import RAE_MNIST
@@ -437,7 +438,8 @@ class AnomalousMNISTAutoencoderDataset(Dataset):
         return len(self.indices)
 
 
-class NominalMNISTAutoencoderCachedDataset(Dataset):
+class \
+        NominalMNISTAutoencoderCachedDataset(Dataset):
     def __init__(self, nominal_class, train=True, device=None):
         self.data = torchvision.datasets.MNIST(
             'datasets',
@@ -452,7 +454,7 @@ class NominalMNISTAutoencoderCachedDataset(Dataset):
                                                            min_max_mnist[nominal_class][0]])])
         )
 
-        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/AE_V3_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
+        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/AE_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
 
@@ -478,7 +480,7 @@ class AnomalousMNISTAutoencoderCachedDataset(Dataset):
                                                            min_max_mnist[nominal_class][0]])])
         )
 
-        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/AE_V3_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
+        self.data_latent = torch.load(f"./representations/MNIST_AE_representation/AE_MNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
 
@@ -568,12 +570,12 @@ class AnomalousMNISTAutoencoderAllDataset(Dataset):
         return len(self.indices)
 
 
-class NominalMVTecCapsuleDataset(Dataset):
-    def __init__(self, train=True):
+class NominalMVTecCapsuleImageDataset(Dataset):
+    def __init__(self, train=True, size=32):
         self.path = 'datasets/mvtec/capsule'
         self.train = train
         self.samples = 219 if train else 23
-        self.transform = torchvision.transforms.Resize((250, 250))
+        self.transform = torchvision.transforms.Resize((size, size))
 
     def __len__(self):
         return self.samples
@@ -583,8 +585,8 @@ class NominalMVTecCapsuleDataset(Dataset):
         return self.transform(image)
 
 
-class AnomalousMVTecCapsuleDataset(Dataset):
-    def __init__(self):
+class AnomalousMVTecCapsuleImageDataset(Dataset):
+    def __init__(self, size=32):
         self.path = 'datasets/mvtec/capsule'
         self.samples = {
             'crack': 23,
@@ -593,7 +595,7 @@ class AnomalousMVTecCapsuleDataset(Dataset):
             'scratch': 23,
             'squeeze': 20
         }
-        self.transform = torchvision.transforms.Resize((250, 250))
+        self.transform = torchvision.transforms.Resize((size, size))
 
     def __len__(self):
         return sum([self.samples[type] for type in self.samples.keys()])
@@ -605,6 +607,97 @@ class AnomalousMVTecCapsuleDataset(Dataset):
                 return self.transform(image)
             idx -= self.samples[type]
 
+
+class NominalMVTecCapsuleDataset(Dataset):
+    def __init__(self, train=True, size=32):
+        self.path = 'datasets/mvtec/capsule'
+        self.train = train
+        self.samples = 219 if train else 23
+        self.transform = torchvision.transforms.Compose([torchvision.transforms.Resize((size, size)), FlattenTransform()])
+
+    def __len__(self):
+        return self.samples
+
+    def __getitem__(self, idx):
+        image = torchvision.io.read_image(f"{self.path}/{'train' if self.train else 'test'}/good/{idx:03d}.png") / 255
+        return self.transform(image)
+
+
+class AnomalousMVTecCapsuleDataset(Dataset):
+    def __init__(self, size=32):
+        self.path = 'datasets/mvtec/capsule'
+        self.samples = {
+            'crack': 23,
+            'faulty_imprint': 22,
+            'poke': 21,
+            'scratch': 23,
+            'squeeze': 20
+        }
+        self.transform = torchvision.transforms.Compose([torchvision.transforms.Resize((size, size)), FlattenTransform()])
+
+    def __len__(self):
+        return sum([self.samples[type] for type in self.samples.keys()])
+
+    def __getitem__(self, idx):
+        for type in self.samples.keys():
+            if idx < self.samples[type]:
+                image = torchvision.io.read_image(f'{self.path}/test/{type}/{idx:03d}.png') / 255
+                return self.transform(image)
+            idx -= self.samples[type]
+
+
+class NominalMVTecCapsuleAutoencoderDataset(Dataset):
+    def __init__(self, train=True, size=32, device=None):
+        self.path = 'datasets/mvtec/capsule'
+        self.train = train
+        self.samples = 219 if train else 23
+        self.transform = torchvision.transforms.Resize((size, size))
+
+        self.autoencoder = MVTec_AE()
+        if device is not None:
+            self.autoencoder = self.autoencoder.to(device)
+        self.autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MVTec_Capsule'))
+        self.autoencoder.eval()
+
+    def __len__(self):
+        return self.samples
+
+    def __getitem__(self, idx):
+        image = torchvision.io.read_image(f"{self.path}/{'train' if self.train else 'test'}/good/{idx:03d}.png") / 255
+        image = self.transform(image)
+        Z, image_hat = self.autoencoder(image.reshape(1, image.size(dim=0), image.size(dim=1), image.size(dim=2)))
+        return Z[0]
+
+
+class AnomalousMVTecCapsuleAutoencoderDataset(Dataset):
+    def __init__(self, train=True, size=32, device=None):
+        self.path = 'datasets/mvtec/capsule'
+        self.samples = {
+            'crack': 23,
+            'faulty_imprint': 22,
+            'poke': 21,
+            'scratch': 23,
+            'squeeze': 20
+        }
+        self.transform = torchvision.transforms.Resize((size, size))
+
+        self.autoencoder = MVTec_AE()
+        if device is not None:
+            self.autoencoder = self.autoencoder.to(device)
+        self.autoencoder.load_state_dict(torch.load(f'./snapshots/AE_MVTec_Capsule'))
+        self.autoencoder.eval()
+
+    def __len__(self):
+        return self.samples
+
+    def __getitem__(self, idx):
+        for type in self.samples.keys():
+            if idx < self.samples[type]:
+                image = torchvision.io.read_image(f'{self.path}/test/{type}/{idx:03d}.png') / 255
+                image = self.transform(image)
+                Z, image_hat = self.autoencoder(image.reshape(1, image.size(dim=0), image.size(dim=1), image.size(dim=2)))
+                return Z[0]
+            idx -= self.samples[type]
 
 
 class ToyDataset(Dataset):

@@ -28,7 +28,7 @@ class CIFAR10_Encoder_V6(nn.Module):
             nn.BatchNorm2d(96),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(96 * 4 * 4, 32)
+            nn.Linear(96 * 4 * 4, 64)
         )
 
     def forward(self, x):

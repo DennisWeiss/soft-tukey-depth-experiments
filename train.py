@@ -5,8 +5,9 @@ import matplotlib.pyplot as plt
 from DataLoader import NominalMNISTImageDataset, AnomalousMNISTImageDataset, NominalCIFAR10ImageDataset, \
     AnomalousCIFAR10ImageDataset, NominalCIFAR10AutoencoderDataset, AnomalousCIFAR10AutoencoderDataset, \
     NominalMNISTAutoencoderDataset, AnomalousMNISTAutoencoderDataset, NominalMNISTAutoencoderCachedDataset, \
-    AnomalousMNISTAutoencoderCachedDataset
+    AnomalousMNISTAutoencoderCachedDataset, NominalMVTecCapsuleImageDataset, AnomalousMVTecCapsuleImageDataset
 from models.AE_CIFAR10_V6 import AE_CIFAR10_V6
+from models.AE_CIFAR10_V7 import AE_CIFAR10_V7
 from models.AE_MNIST_V3 import AE_MNIST_V3
 from models.CIFAR10_AE_Encoder import CIFAR10_AE_Encoder
 from models.CIFAR10_AE_Encoder_V2 import CIFAR10_AE_Encoder_V2
@@ -23,22 +24,24 @@ from models.CIFAR10_Encoder_V3 import CIFAR10_Encoder_V3
 import torch.utils.data
 import numpy as np
 import scipy as sp
+import utils
 
+from models.MVTecCapsule_Encoder import MVTecCapsule_Encoder
 from models.Wasserstein_Network import Wasserstein_Network
 
 
-DATASET_NAME = 'MNIST'
-NOMINAL_DATASET = NominalMNISTImageDataset
-ANOMALOUS_DATASET = AnomalousMNISTImageDataset
-RESULT_NAME_DESC = 'v2_kldiv_8x_1000_temp0.5_lr1e-2_30epochs'
-DATA_SIZE = 1000
+DATASET_NAME = 'CIFAR10_Autoencoder'
+NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
+ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
+RESULT_NAME_DESC = 'varmax_temp0.5_dim64'
+DATA_SIZE = 1800
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
 
 
 USE_CUDA_IF_AVAILABLE = True
-BATCH_SIZE = 1000
-ENCODER_LEARNING_RATE = 1e-3
+BATCH_SIZE = 1800
+ENCODER_LEARNING_RATE = 3e-3
 HALFSPACE_OPTIMIZER_LEARNING_RATE = 1e+3
 WASSERSTEIN_NETWORK_LEARNING_RATE = 1e-2
 WEIGHT_DECAY = 0
@@ -48,7 +51,8 @@ ENCODING_DIM = 64
 TARGET_DISTRIBUTION = lambda x: 8*x
 HISTOGRAM_BINS = 50
 NUM_EPOCHS = 30
-STD_ITERATIONS = 10
+STD_ITERATIONS = 30
+STD_COMPUTATIONS = 20
 WASSERSTEIN_ITERATIONS = 10
 RUNS = 1
 
@@ -150,10 +154,8 @@ def draw_svd_plot(X, n, alpha=0.01):
 
 
 def draw_scatter_plot(X, z_params):
-    X_np = X.Y_mean().cpu().numpy()
-    z_normalized = np.zeros(X.size())
-    for i in range(len(z_params)):
-        z_normalized[i] = z_params[i].Y_mean().cpu() / z_params[i].Y_mean().cpu().norm()
+    X_np = X.detach().cpu().numpy()
+    z_normalized = z_params.detach().cpu().numpy() / torch.norm(z_params.detach(), dim=1).cpu().numpy().reshape(-1, 1)
 
     X_scatter_plot = plt.figure()
     plt.scatter(
@@ -165,19 +167,20 @@ def draw_scatter_plot(X, z_params):
 
 
 for run in range(RUNS):
-    for NOMINAL_CLASS in range(2, 3):
-        train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=True), list(range(DATA_SIZE)))
+    for NOMINAL_CLASS in range(1, 2):
+        train_data = torch.utils.data.Subset(NOMINAL_DATASET(train=True, nominal_class=NOMINAL_CLASS), list(range(DATA_SIZE)))
         train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE)
         train_dataloader_full_data = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
 
-        test_data_nominal = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=NOMINAL_CLASS, train=False), list(range(TEST_NOMINAL_SIZE)))
+        test_data_nominal = torch.utils.data.Subset(NOMINAL_DATASET(train=False, nominal_class=NOMINAL_CLASS), list(range(TEST_NOMINAL_SIZE)))
         test_dataloader_nominal = torch.utils.data.DataLoader(test_data_nominal, batch_size=16, shuffle=True)
 
-        test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=NOMINAL_CLASS, train=False), list(range(TEST_ANOMALOUS_SIZE)))
+        test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(train=False, nominal_class=NOMINAL_CLASS), list(range(TEST_ANOMALOUS_SIZE)))
         test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=16, shuffle=True)
 
-        encoder = AE_MNIST_V3().to(device)
-        encoder.load_state_dict(torch.load(f'./snapshots/AE_V3_MNIST_{NOMINAL_CLASS}'))
+        encoder = CIFAR10_AE_Encoder().to(device)
+        # encoder.load_weights(f'./snapshots/AE_V7_CIFAR10_{NOMINAL_CLASS}')
+        # encoder.load_state_dict(torch.load(f'./snapshots/AE_V3_MNIST_{NOMINAL_CLASS}'))
         encoder.train()
 
         # autoencoder = AE_CIFAR10_V6().to(device)
@@ -194,8 +197,7 @@ for run in range(RUNS):
 
         # z = [torch.ones(X.size(dim=1), device=device) for i in range(X.size(dim=0))]
         # z_params = [torch.nn.Parameter(z[i].divide(torch.norm(z[i]))) for i in range(len(z))]
-        z_params = torch.nn.Parameter(torch.rand(len(train_data), ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)))
-        optimizer_z = torch.optim.SGD([z_params], lr=HALFSPACE_OPTIMIZER_LEARNING_RATE)
+        best_z = torch.rand(len(train_data), ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)).detach()
 
         for i in range(NUM_EPOCHS):
             print(f'Epoch {i+1}')
@@ -203,26 +205,38 @@ for run in range(RUNS):
 
             for step, X in enumerate(train_dataloader):
                 X = X.to(device)
-                Y, X_hat = encoder(X)
+                Y = encoder(X)
                 Y_detached = Y.detach()
-
-                for k in range(STD_ITERATIONS):
-                    optimizer_z.zero_grad()
-
-                    for step2, X_train in enumerate(train_dataloader_full_data):
-                        X_train = X_train.to(device)
-                        Y_train, X_train_hat = encoder(X_train)
-
-                        _soft_tukey_depth = soft_tukey_depth_v2(Y_train.detach(), Y_detached, z_params, SOFT_TUKEY_DEPTH_TEMP)
-                        _soft_tukey_depth.sum().backward()
-                        optimizer_z.step()
-                    # print(j, z_params[j])
 
                 for step2, X_train in enumerate(train_dataloader_full_data):
                     X_train = X_train.to(device)
-                    Y_train, X_train_hat = encoder(X_train)
+                    Y_train = encoder(X_train)
 
-                    tds = soft_tukey_depth_v2(Y_train, Y, z_params.detach(), SOFT_TUKEY_DEPTH_TEMP)
+                    tukey_depths = soft_tukey_depth_v2(Y_train.detach(), Y.detach(), best_z, SOFT_TUKEY_DEPTH_TEMP)
+
+                    for k in range(STD_COMPUTATIONS):
+                        z_params = torch.nn.Parameter(2 * torch.rand(len(train_data), ENCODING_DIM, device=device) - 1)
+                        # z_params = torch.nn.Parameter(best_z)
+                        optimizer_z = torch.optim.SGD([z_params], lr=HALFSPACE_OPTIMIZER_LEARNING_RATE)
+                        for l in range(STD_ITERATIONS):
+                            optimizer_z.zero_grad()
+
+                            _soft_tukey_depth = soft_tukey_depth_v2(Y_train.detach(), Y_detached, z_params, SOFT_TUKEY_DEPTH_TEMP)
+                            _soft_tukey_depth.sum().backward()
+                            optimizer_z.step()
+
+                        _soft_tukey_depth = soft_tukey_depth_v2(Y_train.detach(), Y_detached, z_params, SOFT_TUKEY_DEPTH_TEMP)
+
+                        for j in range(tukey_depths.size(dim=0)):
+                            if _soft_tukey_depth[j] < tukey_depths[j]:
+                                tukey_depths[j] = _soft_tukey_depth[j].detach()
+                                best_z[j] = z_params[j].detach()
+
+                for step2, X_train in enumerate(train_dataloader_full_data):
+                    X_train = X_train.to(device)
+                    Y_train = encoder(X_train)
+
+                    tds = soft_tukey_depth_v2(Y_train, Y, best_z, SOFT_TUKEY_DEPTH_TEMP)
 
                     # for j in range(WASSERSTEIN_ITERATIONS):
                     #     optimizer_wasserstein_network.zero_grad()
@@ -237,86 +251,92 @@ for run in range(RUNS):
                     print(f'Variance: {var.item()}')
                     mean_td = tds.mean()
                     print(f'Mean: {mean_td.item()}')
-                    # (-var).backward()
+                    # mean_td_loss = -mean_td - 1e-2 * torch.norm(Y - Y.mean(dim=0))
+                    # mean_td_loss.backward()
+                    # print(f'Mean TD loss: {mean_td_loss}')
+                    (-var).backward()
                     # (-mean_td).backward()
-                    kl_div = get_kl_divergence(tds, lambda x: 2, 0.05, 1e-3)
+                    # kl_div = get_kl_divergence(tds, TARGET_DISTRIBUTION, 0.05, 1e-3)
                     # wasserstein_loss = get_wasserstein_loss(wasserstein_network, tds)
                     # print(f'KL divergence: {kl_div.item()}')
                     # print(f'Wasserstein loss: {wasserstein_loss.item()}')
-                    kl_div.backward()
+                    # kl_div.backward()
                     # wasserstein_loss.backward()
                     optimizer_encoder.step()
 
-                    draw_histogram(Y_train, Y, z_params, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
+                    if i % 2 == 0:
+                        draw_histogram(Y_train, Y, best_z, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
 
-                if i % 1 == 0:
+                if i % 2 == 0:
                     if ENCODING_DIM == 2:
-                        draw_scatter_plot(Y, z_params[(step * BATCH_SIZE):((step+1) * BATCH_SIZE)])
+                        draw_scatter_plot(Y, best_z[(step * BATCH_SIZE):((step+1) * BATCH_SIZE)])
 
-        for step, X in enumerate(train_dataloader_full_data):
-            X = X.to(device)
-            Y, X_hat = encoder(X)
-
-            # soft_tukey_depths = []
-            # for j in range(Y.size(dim=0)):
-            #     soft_tukey_depths.append(soft_tukey_depth(Y[j], Y, z_params[j]).item() / Y.size(dim=0))
+            # for step, X in enumerate(train_dataloader_full_data):
+            #     X = X.to(device)
+            #     Y = encoder(X)
             #
-            # draw_histogram_tukey_depth(soft_tukey_depths, bins=HISTOGRAM_BINS)
-            svd_dim = draw_svd_plot(Y, min(ENCODING_DIM, 16), 0.01)
-            print(f'SVD dimensionality: {svd_dim}')
+            #     # soft_tukey_depths = []
+            #     # for j in range(Y.size(dim=0)):
+            #     #     soft_tukey_depths.append(soft_tukey_depth(Y[j], Y, z_params[j]).item() / Y.size(dim=0))
+            #     #
+            #     # draw_histogram_tukey_depth(soft_tukey_depths, bins=HISTOGRAM_BINS)
+            #     svd_dim = draw_svd_plot(Y, min(ENCODING_DIM, 16), 0.01)
+            #     print(f'SVD dimensionality: {svd_dim}')
 
 
-            soft_tukey_depths = []
-            for step2, X_test_nominal in enumerate(test_dataloader_nominal):
-                X_test_nominal = X_test_nominal.to(device)
-                Y_test_nominal, X_test_nominal_hat = encoder(X_test_nominal)
-                z_test_nominal = torch.nn.Parameter(torch.rand(X_test_nominal.size(dim=0), ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)))
-                optimizer_z_test_nominal = torch.optim.SGD([z_test_nominal], lr=3e+1)
+                nominal_soft_tukey_depths = []
+                for step2, X_test_nominal in enumerate(test_dataloader_nominal):
+                    X_test_nominal = X_test_nominal.to(device)
+                    Y_test_nominal = encoder(X_test_nominal)
+                    z_test_nominal = torch.nn.Parameter(torch.rand(X_test_nominal.size(dim=0), ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)))
+                    optimizer_z_test_nominal = torch.optim.SGD([z_test_nominal], lr=3e+1)
 
-                for k in range(2*STD_ITERATIONS):
-                    optimizer_z_test_nominal.zero_grad()
+                    for l in range(2 * STD_ITERATIONS):
+                        optimizer_z_test_nominal.zero_grad()
+                        _soft_tukey_depth = soft_tukey_depth_v2(Y_test_nominal.detach(), Y.detach(), z_test_nominal, SOFT_TUKEY_DEPTH_TEMP)
+                        _soft_tukey_depth.sum().backward()
+                        optimizer_z_test_nominal.step()
                     _soft_tukey_depth = soft_tukey_depth_v2(Y_test_nominal.detach(), Y.detach(), z_test_nominal, SOFT_TUKEY_DEPTH_TEMP)
-                    _soft_tukey_depth.sum().backward()
-                    optimizer_z_test_nominal.step()
-                _soft_tukey_depth = soft_tukey_depth_v2(Y_test_nominal.detach(), Y.detach(), z_test_nominal, SOFT_TUKEY_DEPTH_TEMP)
-                soft_tukey_depths += _soft_tukey_depth.tolist()
+                    nominal_soft_tukey_depths += _soft_tukey_depth.tolist()
 
-                # if ENCODING_DIM == 2:
-                #     draw_scatter_plot(Y_test_nominal, z_test_nominal)
-                # draw_histogram(Y_test_nominal, Y, z_test_nominal, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
+                    # if ENCODING_DIM == 2:
+                    #     draw_scatter_plot(Y_test_nominal, z_test_nominal)
+                    # draw_histogram(Y_test_nominal, Y, z_test_nominal, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
 
-            writer = csv.writer(open(
-                f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}.csv',
-                'w'))
-            writer.writerow(soft_tukey_depths)
+                writer = csv.writer(open(
+                    f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Nominal_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}.csv',
+                    'w'))
+                writer.writerow(nominal_soft_tukey_depths)
 
-            soft_tukey_depths = []
+                anomalous_soft_tukey_depths = []
 
-            for step2, X_test_anomalous in enumerate(test_dataloader_anomalous):
-                X_test_anomalous = X_test_anomalous.to(device)
-                Y_test_anomalous, X_test_anomalous_hat = encoder(X_test_anomalous)
-                z_test_anomalous = torch.nn.Parameter(torch.rand(X_test_anomalous.size(dim=0), ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)))
-                optimizer_z_test_anomalous = torch.optim.SGD([z_test_anomalous], lr=3e+1)
+                for step2, X_test_anomalous in enumerate(test_dataloader_anomalous):
+                    X_test_anomalous = X_test_anomalous.to(device)
+                    Y_test_anomalous = encoder(X_test_anomalous)
+                    z_test_anomalous = torch.nn.Parameter(torch.rand(X_test_anomalous.size(dim=0), ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)))
+                    optimizer_z_test_anomalous = torch.optim.SGD([z_test_anomalous], lr=3e+1)
 
-                for k in range(2*STD_ITERATIONS):
-                    optimizer_z_test_anomalous.zero_grad()
+                    for l in range(2 * STD_ITERATIONS):
+                        optimizer_z_test_anomalous.zero_grad()
+                        _soft_tukey_depth = soft_tukey_depth_v2(Y_test_anomalous.detach(), Y.detach(), z_test_anomalous, SOFT_TUKEY_DEPTH_TEMP)
+                        _soft_tukey_depth.sum().backward()
+                        optimizer_z_test_anomalous.step()
                     _soft_tukey_depth = soft_tukey_depth_v2(Y_test_anomalous.detach(), Y.detach(), z_test_anomalous, SOFT_TUKEY_DEPTH_TEMP)
-                    _soft_tukey_depth.sum().backward()
-                    optimizer_z_test_anomalous.step()
-                _soft_tukey_depth = soft_tukey_depth_v2(Y_test_anomalous.detach(), Y.detach(), z_test_anomalous, SOFT_TUKEY_DEPTH_TEMP)
-                soft_tukey_depths += _soft_tukey_depth.tolist()
+                    anomalous_soft_tukey_depths += _soft_tukey_depth.tolist()
 
-                # if ENCODING_DIM == 2:
-                #     draw_scatter_plot(Y_test_anomalous, z_test_anomalous)
-                # draw_histogram(Y_test_anomalous, Y, z_test_anomalous, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
+                    # if ENCODING_DIM == 2:
+                    #     draw_scatter_plot(Y_test_anomalous, z_test_anomalous)
+                    # draw_histogram(Y_test_anomalous, Y, z_test_anomalous, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
 
-            writer = csv.writer(open(
-                f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}.csv',
-                'w'))
-            writer.writerow(soft_tukey_depths)
+                writer = csv.writer(open(
+                    f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}.csv',
+                    'w'))
+                writer.writerow(anomalous_soft_tukey_depths)
+
+                print(f'AUROC: {utils.get_auroc(nominal_soft_tukey_depths, anomalous_soft_tukey_depths)}')
 
 
-        torch.save(encoder.state_dict(), f'./snapshots/{DATASET_NAME}_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}')
+        torch.save(encoder.state_dict(), f'./snapshots/{DATASET_NAME}_Encoder_V7_{RESULT_NAME_DESC}_{NOMINAL_CLASS}')
 
         # for i in range(X.size(dim=0)):
         #     print(soft_tukey_depth(X[i].reshape(1, -1), X, z_params[i]))

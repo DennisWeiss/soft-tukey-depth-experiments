@@ -10,7 +10,7 @@ class CIFAR10_AE_Encoder(nn.Module):
         self.encoder = nn.Sequential(
             nn.Linear(512, 256),
             nn.ReLU(),
-            nn.Linear(256, 16)
+            nn.Linear(256, 64)
         )
 
     def forward(self, x):

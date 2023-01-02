@@ -1,8 +1,10 @@
-from DataLoader import NominalCIFAR10ImageDataset, NominalMNISTImageDataset, NominalMVTecCapsuleDataset
+from DataLoader import NominalCIFAR10ImageDataset, NominalMNISTImageDataset, NominalMVTecCapsuleImageDataset, \
+    AnomalousMVTecCapsuleImageDataset, AnomalousCIFAR10ImageDataset
 from models.AE_CIFAR10 import AE_CIFAR10
 from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
 from models.AE_CIFAR10_V5 import AE_CIFAR10_V5
 from models.AE_CIFAR10_V6 import AE_CIFAR10_V6
+from models.AE_CIFAR10_V7 import AE_CIFAR10_V7
 from models.AE_MNIST_V2 import AE_MNIST_V2
 from models.AE_MNIST_V3 import AE_MNIST_V3
 from models.MVTec_AE import MVTec_AE
@@ -23,12 +25,12 @@ from models.resnet import ResNet50
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'MNIST'
+DATASET_NAME = 'CIFAR10'
 SAVE_MODEL = True
 # CLASS = 0
 NUM_EPOCHS = 200
 BATCH_SIZE = 64
-LEARNING_RATE = 3e-4
+LEARNING_RATE = 1e-3
 
 
 normal_dist = torch.distributions.normal.Normal(torch.tensor([[0, 0], [0, 0]], dtype=torch.float), torch.tensor([[1, 1], [1, 1]], dtype=torch.float))
@@ -68,14 +70,19 @@ def get_loss_kl_div_latent(Z_mu, Z_std, Z):
     return torch.sum(q.log_prob(Z) - p.log_prob(Z), dim=1).mean()
 
 
-for CLASS in range(8, 10):
-    train_data = NominalMNISTImageDataset(train=True, nominal_class=CLASS)
+for CLASS in range(0, 1):
+    train_data = NominalCIFAR10ImageDataset(train=True, nominal_class=CLASS)
 
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE, pin_memory=True)
-    test_data = NominalMNISTImageDataset(train=False, nominal_class=CLASS)
 
+    test_data = NominalCIFAR10ImageDataset(train=False, nominal_class=CLASS)
     test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=BATCH_SIZE, pin_memory=True)
-    autoencoder = AE_MNIST_V3().to(device)
+
+    test_data_anomalous = AnomalousCIFAR10ImageDataset(train=False, nominal_class=CLASS)
+    test_anomalous_dataloader = torch.utils.data.DataLoader(test_data_anomalous, batch_size=BATCH_SIZE, pin_memory=True)
+
+    autoencoder = AE_CIFAR10_V7().to(device)
+
     # print(list(autoencoder.parameters()))
 
     print(len(train_dataloader))
@@ -86,18 +93,18 @@ for CLASS in range(8, 10):
         autoencoder.train()
         for X in tqdm(train_dataloader, desc=f'Epoch {epoch+1}/{NUM_EPOCHS}', unit='batch', colour='blue'):
             X = X.to(device)
-            if epoch == NUM_EPOCHS - 1:
+            if epoch % 10 == 0 or epoch == NUM_EPOCHS - 1:
                 plt.imshow(np.transpose(X[0].cpu().numpy(), (1, 2, 0)))
                 plt.show()
             Z, X_hat = autoencoder(X)
-            if epoch == NUM_EPOCHS - 1:
+            if epoch % 10 == 0 or epoch == NUM_EPOCHS - 1:
                 plt.imshow(np.transpose(X_hat[0].cpu().detach().numpy(), (1, 2, 0)))
                 plt.show()
                 # rand_img = autoencoder.decoder(torch.rand(1, 64, device=device).multiply(4).subtract(2))
                 # plt.imshow(np.transpose(rand_img[0].cpu().detach().numpy(), (1, 2, 0)))
                 # plt.show()
 
-            total_loss = get_loss_rec(X, X_hat) + 1e-4 * get_loss_rae(Z) + 1e-5 * get_loss_reg(autoencoder)
+            total_loss = get_loss_rec(X, X_hat) + 1e-4 * get_loss_rae(Z) + 1e-4 * get_loss_reg(autoencoder)
 
             optimizer.zero_grad()
             total_loss.backward()
@@ -113,7 +120,7 @@ for CLASS in range(8, 10):
             Z, X_hat = autoencoder(X)
             rec_loss = get_loss_rec(X, X_hat)
             # kl_div_loss = get_loss_kl_div_latent(Z_mu, Z_std, Z)
-            total_loss = total_loss.add(torch.multiply(rec_loss + 1e-4 * get_loss_rae(Z) + 1e-5 * get_loss_reg(autoencoder), BATCH_SIZE / len(train_data)))
+            total_loss = total_loss.add(torch.multiply(rec_loss + 1e-4 * get_loss_rae(Z) + 1e-4 * get_loss_reg(autoencoder), BATCH_SIZE / len(train_data)))
             total_rec_loss = total_rec_loss.add(torch.multiply(rec_loss, BATCH_SIZE / len(train_data)))
             # total_kl_div_loss = total_kl_div_loss.add(torch.multiply(kl_div_loss, BATCHS_SIZE / len(train_data)))
 
@@ -126,16 +133,32 @@ for CLASS in range(8, 10):
         total_kl_div_loss = torch.tensor(0)
         for step, X in enumerate(test_dataloader):
             X = X.to(device)
+            if epoch % 10 == 0 or epoch == NUM_EPOCHS - 1:
+                plt.imshow(np.transpose(X[0].cpu().numpy(), (1, 2, 0)))
+                plt.show()
             Z, X_hat = autoencoder(X)
+            if epoch % 10 == 0 or epoch == NUM_EPOCHS - 1:
+                plt.imshow(np.transpose(X_hat[0].cpu().detach().numpy(), (1, 2, 0)))
+                plt.show()
             rec_loss = get_loss_rec(X, X_hat)
             # kl_div_loss = get_loss_kl_div_latent(Z_mu, Z_std, Z)
-            total_loss = total_loss.add(torch.multiply(rec_loss + 1e-4 * get_loss_rae(Z) + 1e-5 * get_loss_reg(autoencoder), BATCH_SIZE / len(test_data)))
+            total_loss = total_loss.add(torch.multiply(rec_loss + 1e-4 * get_loss_rae(Z) + 1e-4 * get_loss_reg(autoencoder), BATCH_SIZE / len(test_data)))
             total_rec_loss = total_rec_loss.add(torch.multiply(rec_loss, BATCH_SIZE / len(test_data)))
             # total_kl_div_loss = total_kl_div_loss.add(torch.multiply(kl_div_loss, BATCHS_SIZE / len(test_data)))
+
+        for step, X in enumerate(test_anomalous_dataloader):
+            X = X.to(device)
+            if epoch % 10 == 0 or epoch == NUM_EPOCHS - 1:
+                plt.imshow(np.transpose(X[0].cpu().numpy(), (1, 2, 0)))
+                plt.show()
+            Z, X_hat = autoencoder(X)
+            if epoch % 10 == 0 or epoch == NUM_EPOCHS - 1:
+                plt.imshow(np.transpose(X_hat[0].cpu().detach().numpy(), (1, 2, 0)))
+                plt.show()
 
         print(f'Test total loss: {total_loss.item()}')
         print(f'Test reconstruction loss: {total_rec_loss.item()}')
         # print(f'Test KL divergence loss: {total_kl_div_loss.item()}')
 
-        if SAVE_MODEL:
-            torch.save(autoencoder.state_dict(), f'./snapshots/AE_V3_{DATASET_NAME}_{CLASS}')
+        if SAVE_MODEL and epoch % 10 == 0:
+            torch.save(autoencoder.state_dict(), f'./snapshots/AE_V7_{DATASET_NAME}_{CLASS}')

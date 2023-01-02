@@ -10,7 +10,7 @@ class MNIST_AE_Encoder(nn.Module):
         self.encoder = nn.Sequential(
             nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Linear(64, 64)
+            nn.Linear(64, 32),
         )
 
     def forward(self, x):

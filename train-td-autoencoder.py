@@ -1,4 +1,4 @@
-from DataLoader import NominalCIFAR10ImageDataset, NominalMNISTImageDataset, NominalMVTecCapsuleDataset
+from DataLoader import NominalCIFAR10ImageDataset, NominalMNISTImageDataset, NominalMVTecCapsuleImageDataset
 from models.AE_CIFAR10 import AE_CIFAR10
 from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
 from models.AE_MNIST_V2 import AE_MNIST_V2
