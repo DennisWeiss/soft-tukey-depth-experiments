@@ -33,25 +33,25 @@ from models.Wasserstein_Network import Wasserstein_Network
 DATASET_NAME = 'CIFAR10_Autoencoder'
 NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
 ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
-RESULT_NAME_DESC = 'varmax_temp0.5_dim64'
-DATA_SIZE = 1800
-TEST_NOMINAL_SIZE = 1000
-TEST_ANOMALOUS_SIZE = 1000
+RESULT_NAME_DESC = 'kldiv_8x_temp0.2_dim64'
+DATA_SIZE = 4000
+TEST_NOMINAL_SIZE = 800
+TEST_ANOMALOUS_SIZE = 800
 
 
 USE_CUDA_IF_AVAILABLE = True
-BATCH_SIZE = 1800
-ENCODER_LEARNING_RATE = 3e-3
+BATCH_SIZE = 800
+ENCODER_LEARNING_RATE = 1e-3
 HALFSPACE_OPTIMIZER_LEARNING_RATE = 1e+3
 WASSERSTEIN_NETWORK_LEARNING_RATE = 1e-2
 WEIGHT_DECAY = 0
 KERNEL_BANDWIDTH = 0.05
-SOFT_TUKEY_DEPTH_TEMP = 0.5
+SOFT_TUKEY_DEPTH_TEMP = 0.2
 ENCODING_DIM = 64
 TARGET_DISTRIBUTION = lambda x: 8*x
 HISTOGRAM_BINS = 50
 NUM_EPOCHS = 30
-STD_ITERATIONS = 30
+STD_ITERATIONS = 20
 STD_COMPUTATIONS = 20
 WASSERSTEIN_ITERATIONS = 10
 RUNS = 1
@@ -167,7 +167,7 @@ def draw_scatter_plot(X, z_params):
 
 
 for run in range(RUNS):
-    for NOMINAL_CLASS in range(1, 2):
+    for NOMINAL_CLASS in range(3, 4):
         train_data = torch.utils.data.Subset(NOMINAL_DATASET(train=True, nominal_class=NOMINAL_CLASS), list(range(DATA_SIZE)))
         train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE)
         train_dataloader_full_data = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
@@ -212,25 +212,30 @@ for run in range(RUNS):
                     X_train = X_train.to(device)
                     Y_train = encoder(X_train)
 
-                    tukey_depths = soft_tukey_depth_v2(Y_train.detach(), Y.detach(), best_z, SOFT_TUKEY_DEPTH_TEMP)
+                    tukey_depths = soft_tukey_depth_v2(Y_detached, Y_train.detach(), best_z[(step * BATCH_SIZE):((step+1) * BATCH_SIZE)], SOFT_TUKEY_DEPTH_TEMP)
 
                     for k in range(STD_COMPUTATIONS):
-                        z_params = torch.nn.Parameter(2 * torch.rand(len(train_data), ENCODING_DIM, device=device) - 1)
+                        z_params = torch.nn.Parameter(2 * torch.rand(BATCH_SIZE, ENCODING_DIM, device=device) - 1)
                         # z_params = torch.nn.Parameter(best_z)
                         optimizer_z = torch.optim.SGD([z_params], lr=HALFSPACE_OPTIMIZER_LEARNING_RATE)
                         for l in range(STD_ITERATIONS):
                             optimizer_z.zero_grad()
 
-                            _soft_tukey_depth = soft_tukey_depth_v2(Y_train.detach(), Y_detached, z_params, SOFT_TUKEY_DEPTH_TEMP)
+                            _soft_tukey_depth = soft_tukey_depth_v2(Y_detached, Y_train.detach(), z_params, SOFT_TUKEY_DEPTH_TEMP)
                             _soft_tukey_depth.sum().backward()
                             optimizer_z.step()
 
-                        _soft_tukey_depth = soft_tukey_depth_v2(Y_train.detach(), Y_detached, z_params, SOFT_TUKEY_DEPTH_TEMP)
+                        _soft_tukey_depth = soft_tukey_depth_v2(Y_detached, Y_train.detach(), z_params, SOFT_TUKEY_DEPTH_TEMP)
 
                         for j in range(tukey_depths.size(dim=0)):
                             if _soft_tukey_depth[j] < tukey_depths[j]:
                                 tukey_depths[j] = _soft_tukey_depth[j].detach()
-                                best_z[j] = z_params[j].detach()
+                                best_z[step*BATCH_SIZE+j] = z_params[j].detach()
+
+            for step, X in enumerate(train_dataloader):
+                X = X.to(device)
+                Y = encoder(X)
+                Y_detached = Y.detach()
 
                 for step2, X_train in enumerate(train_dataloader_full_data):
                     X_train = X_train.to(device)
@@ -254,13 +259,13 @@ for run in range(RUNS):
                     # mean_td_loss = -mean_td - 1e-2 * torch.norm(Y - Y.mean(dim=0))
                     # mean_td_loss.backward()
                     # print(f'Mean TD loss: {mean_td_loss}')
-                    (-var).backward()
+                    # (-var).backward()
                     # (-mean_td).backward()
-                    # kl_div = get_kl_divergence(tds, TARGET_DISTRIBUTION, 0.05, 1e-3)
+                    kl_div = get_kl_divergence(tds, TARGET_DISTRIBUTION, 0.05, 1e-3)
                     # wasserstein_loss = get_wasserstein_loss(wasserstein_network, tds)
-                    # print(f'KL divergence: {kl_div.item()}')
+                    print(f'KL divergence: {kl_div.item()}')
                     # print(f'Wasserstein loss: {wasserstein_loss.item()}')
-                    # kl_div.backward()
+                    kl_div.backward()
                     # wasserstein_loss.backward()
                     optimizer_encoder.step()
 
@@ -271,17 +276,17 @@ for run in range(RUNS):
                     if ENCODING_DIM == 2:
                         draw_scatter_plot(Y, best_z[(step * BATCH_SIZE):((step+1) * BATCH_SIZE)])
 
-            # for step, X in enumerate(train_dataloader_full_data):
-            #     X = X.to(device)
-            #     Y = encoder(X)
-            #
-            #     # soft_tukey_depths = []
-            #     # for j in range(Y.size(dim=0)):
-            #     #     soft_tukey_depths.append(soft_tukey_depth(Y[j], Y, z_params[j]).item() / Y.size(dim=0))
-            #     #
-            #     # draw_histogram_tukey_depth(soft_tukey_depths, bins=HISTOGRAM_BINS)
-            #     svd_dim = draw_svd_plot(Y, min(ENCODING_DIM, 16), 0.01)
-            #     print(f'SVD dimensionality: {svd_dim}')
+            for step, X in enumerate(train_dataloader_full_data):
+                X = X.to(device)
+                Y = encoder(X)
+
+                # soft_tukey_depths = []
+                # for j in range(Y.size(dim=0)):
+                #     soft_tukey_depths.append(soft_tukey_depth(Y[j], Y, z_params[j]).item() / Y.size(dim=0))
+                #
+                # draw_histogram_tukey_depth(soft_tukey_depths, bins=HISTOGRAM_BINS)
+                # svd_dim = draw_svd_plot(Y, min(ENCODING_DIM, 16), 0.01)
+                # print(f'SVD dimensionality: {svd_dim}')
 
 
                 nominal_soft_tukey_depths = []
