@@ -7,6 +7,7 @@ import pretrainedmodels
 from models.AE_CIFAR10_V3 import AE_CIFAR10_V3
 from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
 from models.AE_CIFAR10_V5 import AE_CIFAR10_V5
+from models.AE_FashionMNIST import AE_FashionMNIST
 from models.AE_MNIST import AE_MNIST
 from models.AE_MNIST_V2 import AE_MNIST_V2
 from models.AE_MNIST_V3 import AE_MNIST_V3
@@ -17,7 +18,7 @@ from transforms.RandomPermutationTransform import RandomPermutationTransform
 
 
 USE_CUDA_IF_AVAILABLE = True
-TRAIN = True
+TRAIN = False
 
 if torch.cuda.is_available():
     print('GPU is available with the following device: {}'.format(torch.cuda.get_device_name()))
@@ -41,25 +42,12 @@ min_max_mnist = [(-0.8826567065619495, 9.001545489292527),
 
 min_max_mnist_all = (-0.8826567065619495, 20.108062262467364)
 
-for nominal_class in range(0, 10):
-    data = torchvision.datasets.MNIST(
+for nominal_class in range(1, 2):
+    data = torchvision.datasets.FashionMNIST(
         'datasets',
         train=TRAIN,
         download=True,
-        transform=torchvision.transforms.Compose([torchvision.transforms.ToTensor(),
-                                                  torchvision.transforms.Lambda(
-                                                      lambda x: global_contrast_normalization(x, scale='l1')),
-                                                  torchvision.transforms.Normalize([(
-                                                                                        min_max_mnist_all if nominal_class == 'all' else
-                                                                                        min_max_mnist[nominal_class])[
-                                                                                        0]],
-                                                                                   [(
-                                                                                        min_max_mnist_all if nominal_class == 'all' else
-                                                                                        min_max_mnist[nominal_class])[
-                                                                                        1] - (
-                                                                                        min_max_mnist_all if nominal_class == 'all' else
-                                                                                        min_max_mnist[nominal_class])[
-                                                                                        0]])])
+        transform=torchvision.transforms.ToTensor()
     )
 
     # data = torchvision.datasets.CIFAR10(
@@ -69,12 +57,12 @@ for nominal_class in range(0, 10):
     #     transform=torchvision.transforms.Compose([torchvision.transforms.Resize((224, 224)), torchvision.transforms.ToTensor()])
     # )
 
-    data_latent = torch.zeros(len(data), 1, 64)
+    data_latent = torch.zeros(len(data), 1, 128)
 
     dataloader = torch.utils.data.DataLoader(data)
 
-    autoencoder = AE_MNIST_V3().to(device)
-    autoencoder.load_state_dict(torch.load(f'./snapshots/AE_V3_MNIST_{nominal_class}'))
+    autoencoder = AE_FashionMNIST().to(device)
+    autoencoder.load_state_dict(torch.load(f'./snapshots/AE_FashionMNIST_{nominal_class}'))
     autoencoder.eval()
 
     # imagenet_model = pretrainedmodels.__dict__['vgg13'](num_classes=1000, pretrained='imagenet').to(device)
@@ -86,4 +74,4 @@ for nominal_class in range(0, 10):
         encoding, x_hat = autoencoder(x[0])
         data_latent[step][0] = encoding.detach()
 
-    torch.save(data_latent, f"./representations/MNIST_AE_representation/AE_V3_MNIST_{'train' if TRAIN else 'test'}_{nominal_class}")
+    torch.save(data_latent, f"./representations/FashionMNIST_AE_representation/AE_FashionMNIST_{'train' if TRAIN else 'test'}_{nominal_class}")

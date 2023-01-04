@@ -9,13 +9,13 @@ import os
 
 
 CLASS = 0
-RESULT_NAME_DESC = 'varmax_temp0.2_dim32'
+RESULT_NAME_DESC = 'temp2'
 RUN = 0
 
-result_path = f'results/CIFAR10_Autoencoder_class{CLASS}_{RESULT_NAME_DESC}_run{RUN}/'
+result_path = f'results/FashionMNIST_Autoencoder_class{CLASS}_{RESULT_NAME_DESC}/'
 
-data0 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Nominal_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
-data1 = csv.reader(open(f'results/raw/soft_tukey_depths_CIFAR10_Autoencoder_Anomalous_Encoder_{RESULT_NAME_DESC}_{CLASS}_run{RUN}.csv'), delimiter=',')
+data0 = csv.reader(open(f'results/raw/soft_tukey_depths_FashionMNIST_Nominal_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
+data1 = csv.reader(open(f'results/raw/soft_tukey_depths_FashionMNIST_Anomalous_{RESULT_NAME_DESC}_{CLASS}.csv'), delimiter=',')
 
 tukey_depths = []
 
@@ -91,7 +91,7 @@ def compute_auroc(true_positive_rates, false_positive_rates):
 true_positive_rates = []
 false_positive_rates = []
 
-for threshold in np.arange(0, 0.5, 1e-5):
+for threshold in np.arange(0, 0.5, 2e-6):
     true_positive_rates.append(get_true_positive_rate(tukey_depths[1], threshold))
     false_positive_rates.append(get_false_positive_rate(tukey_depths[0], threshold))
 

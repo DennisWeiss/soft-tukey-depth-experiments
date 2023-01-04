@@ -1,10 +1,12 @@
 from DataLoader import NominalCIFAR10ImageDataset, NominalMNISTImageDataset, NominalMVTecCapsuleImageDataset, \
-    AnomalousMVTecCapsuleImageDataset, AnomalousCIFAR10ImageDataset
+    AnomalousMVTecCapsuleImageDataset, AnomalousCIFAR10ImageDataset, NominalFashionMNISTImageDataset, \
+    AnomalousFashionMNISTImageDataset
 from models.AE_CIFAR10 import AE_CIFAR10
 from models.AE_CIFAR10_V4 import AE_CIFAR10_V4
 from models.AE_CIFAR10_V5 import AE_CIFAR10_V5
 from models.AE_CIFAR10_V6 import AE_CIFAR10_V6
 from models.AE_CIFAR10_V7 import AE_CIFAR10_V7
+from models.AE_FashionMNIST import AE_FashionMNIST
 from models.AE_MNIST_V2 import AE_MNIST_V2
 from models.AE_MNIST_V3 import AE_MNIST_V3
 from models.MVTec_AE import MVTec_AE
@@ -25,19 +27,13 @@ from models.resnet import ResNet50
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'CIFAR10'
+DATASET_NAME = 'FashionMNIST'
 SAVE_MODEL = True
 # CLASS = 0
-NUM_EPOCHS = 200
+NUM_EPOCHS = 100
 BATCH_SIZE = 64
 LEARNING_RATE = 1e-3
 
-
-normal_dist = torch.distributions.normal.Normal(torch.tensor([[0, 0], [0, 0]], dtype=torch.float), torch.tensor([[1, 1], [1, 1]], dtype=torch.float))
-
-sample = normal_dist.sample()
-print(sample)
-print(normal_dist.log_prob(sample))
 
 
 if torch.cuda.is_available():
@@ -70,18 +66,18 @@ def get_loss_kl_div_latent(Z_mu, Z_std, Z):
     return torch.sum(q.log_prob(Z) - p.log_prob(Z), dim=1).mean()
 
 
-for CLASS in range(0, 1):
-    train_data = NominalCIFAR10ImageDataset(train=True, nominal_class=CLASS)
+for CLASS in range(1, 2):
+    train_data = NominalFashionMNISTImageDataset(train=True, nominal_class=CLASS)
 
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE, pin_memory=True)
 
-    test_data = NominalCIFAR10ImageDataset(train=False, nominal_class=CLASS)
+    test_data = NominalFashionMNISTImageDataset(train=False, nominal_class=CLASS)
     test_dataloader = torch.utils.data.DataLoader(test_data, batch_size=BATCH_SIZE, pin_memory=True)
 
-    test_data_anomalous = AnomalousCIFAR10ImageDataset(train=False, nominal_class=CLASS)
+    test_data_anomalous = AnomalousFashionMNISTImageDataset(train=False, nominal_class=CLASS)
     test_anomalous_dataloader = torch.utils.data.DataLoader(test_data_anomalous, batch_size=BATCH_SIZE, pin_memory=True)
 
-    autoencoder = AE_CIFAR10_V7().to(device)
+    autoencoder = AE_FashionMNIST().to(device)
 
     # print(list(autoencoder.parameters()))
 
@@ -161,4 +157,4 @@ for CLASS in range(0, 1):
         # print(f'Test KL divergence loss: {total_kl_div_loss.item()}')
 
         if SAVE_MODEL and epoch % 10 == 0:
-            torch.save(autoencoder.state_dict(), f'./snapshots/AE_V7_{DATASET_NAME}_{CLASS}')
+            torch.save(autoencoder.state_dict(), f'./snapshots/AE_{DATASET_NAME}_{CLASS}')

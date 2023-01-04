@@ -438,8 +438,7 @@ class AnomalousMNISTAutoencoderDataset(Dataset):
         return len(self.indices)
 
 
-class \
-        NominalMNISTAutoencoderCachedDataset(Dataset):
+class NominalMNISTAutoencoderCachedDataset(Dataset):
     def __init__(self, nominal_class, train=True, device=None):
         self.data = torchvision.datasets.MNIST(
             'datasets',
@@ -560,6 +559,82 @@ class AnomalousMNISTAutoencoderAllDataset(Dataset):
                 x[0] = x[0].to(self.device)
             z, x_hat = autoencoder(x[0])
             self.data_latent[step][0] = z.detach()
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data_latent[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class NominalFashionMNISTImageDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.FashionMNIST(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.ToTensor()
+        )
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0] if nominal_class != 'all' else list(range(len(self.data)))
+
+    def __getitem__(self, item):
+        return self.data[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class AnomalousFashionMNISTImageDataset(Dataset):
+    def __init__(self, nominal_class, train=True):
+        self.data = torchvision.datasets.MNIST(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.ToTensor()
+        )
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0] if nominal_class != 'all' else list(range(len(self.data)))
+
+    def __getitem__(self, item):
+        return self.data[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class NominalFashionMNISTAutoencoderCachedDataset(Dataset):
+    def __init__(self, nominal_class, train=True, device=None):
+        self.data = torchvision.datasets.FashionMNIST(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.ToTensor()
+        )
+
+        self.data_latent = torch.load(f"./representations/FashionMNIST_AE_representation/AE_FashionMNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
+
+        self.indices = torch.where(torch.as_tensor(self.data.targets) == nominal_class)[0]
+
+    def __getitem__(self, item):
+        return self.data_latent[self.indices[item % len(self.indices)]][0]
+
+    def __len__(self):
+        return len(self.indices)
+
+
+class AnomalousFashionMNISTAutoencoderCachedDataset(Dataset):
+    def __init__(self, nominal_class, train=True, device=None):
+        self.data = torchvision.datasets.FashionMNIST(
+            'datasets',
+            train=train,
+            download=True,
+            transform=torchvision.transforms.ToTensor()
+        )
+
+        self.data_latent = torch.load(f"./representations/FashionMNIST_AE_representation/AE_FashionMNIST_{'train' if train else 'test'}_{nominal_class}", map_location=device)
 
         self.indices = torch.where(torch.as_tensor(self.data.targets) != nominal_class)[0]
 

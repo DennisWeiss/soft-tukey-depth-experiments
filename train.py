@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 from DataLoader import NominalMNISTImageDataset, AnomalousMNISTImageDataset, NominalCIFAR10ImageDataset, \
     AnomalousCIFAR10ImageDataset, NominalCIFAR10AutoencoderDataset, AnomalousCIFAR10AutoencoderDataset, \
     NominalMNISTAutoencoderDataset, AnomalousMNISTAutoencoderDataset, NominalMNISTAutoencoderCachedDataset, \
-    AnomalousMNISTAutoencoderCachedDataset, NominalMVTecCapsuleImageDataset, AnomalousMVTecCapsuleImageDataset
+    AnomalousMNISTAutoencoderCachedDataset, NominalMVTecCapsuleImageDataset, AnomalousMVTecCapsuleImageDataset, \
+    NominalFashionMNISTAutoencoderCachedDataset, AnomalousFashionMNISTAutoencoderCachedDataset
 from models.AE_CIFAR10_V6 import AE_CIFAR10_V6
 from models.AE_CIFAR10_V7 import AE_CIFAR10_V7
 from models.AE_MNIST_V3 import AE_MNIST_V3
@@ -14,6 +15,7 @@ from models.CIFAR10_AE_Encoder_V2 import CIFAR10_AE_Encoder_V2
 from models.CIFAR10_Encoder_V4 import CIFAR10_Encoder_V4
 from models.CIFAR10_Encoder_V5 import CIFAR10_Encoder_V5
 from models.CIFAR10_Encoder_V6 import CIFAR10_Encoder_V6
+from models.FashionMNIST_AE_Encoder import FashionMNIST_AE_Encoder
 from models.MNIST_AE_Encoder import MNIST_AE_Encoder
 from models.MNIST_AE_Encoder_V2 import MNIST_AE_Encoder_V2
 from models.MNIST_Encoder import MNIST_Encoder
@@ -30,10 +32,10 @@ from models.MVTecCapsule_Encoder import MVTecCapsule_Encoder
 from models.Wasserstein_Network import Wasserstein_Network
 
 
-DATASET_NAME = 'CIFAR10_Autoencoder'
-NOMINAL_DATASET = NominalCIFAR10AutoencoderDataset
-ANOMALOUS_DATASET = AnomalousCIFAR10AutoencoderDataset
-RESULT_NAME_DESC = 'kldiv_8x_temp0.2_dim64'
+DATASET_NAME = 'FashionMNIST_Autoencoder'
+NOMINAL_DATASET = NominalFashionMNISTAutoencoderCachedDataset
+ANOMALOUS_DATASET = AnomalousFashionMNISTAutoencoderCachedDataset
+RESULT_NAME_DESC = 'kldiv_8x_temp0.5_dim64'
 DATA_SIZE = 4000
 TEST_NOMINAL_SIZE = 800
 TEST_ANOMALOUS_SIZE = 800
@@ -41,16 +43,16 @@ TEST_ANOMALOUS_SIZE = 800
 
 USE_CUDA_IF_AVAILABLE = True
 BATCH_SIZE = 800
-ENCODER_LEARNING_RATE = 1e-3
+ENCODER_LEARNING_RATE = 3e-3
 HALFSPACE_OPTIMIZER_LEARNING_RATE = 1e+3
 WASSERSTEIN_NETWORK_LEARNING_RATE = 1e-2
 WEIGHT_DECAY = 0
 KERNEL_BANDWIDTH = 0.05
-SOFT_TUKEY_DEPTH_TEMP = 0.2
+SOFT_TUKEY_DEPTH_TEMP = 0.5
 ENCODING_DIM = 64
 TARGET_DISTRIBUTION = lambda x: 8*x
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 30
+NUM_EPOCHS = 10
 STD_ITERATIONS = 20
 STD_COMPUTATIONS = 20
 WASSERSTEIN_ITERATIONS = 10
@@ -167,7 +169,7 @@ def draw_scatter_plot(X, z_params):
 
 
 for run in range(RUNS):
-    for NOMINAL_CLASS in range(3, 4):
+    for NOMINAL_CLASS in range(0, 1):
         train_data = torch.utils.data.Subset(NOMINAL_DATASET(train=True, nominal_class=NOMINAL_CLASS), list(range(DATA_SIZE)))
         train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE)
         train_dataloader_full_data = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
@@ -178,7 +180,7 @@ for run in range(RUNS):
         test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(train=False, nominal_class=NOMINAL_CLASS), list(range(TEST_ANOMALOUS_SIZE)))
         test_dataloader_anomalous = torch.utils.data.DataLoader(test_data_anomalous, batch_size=16, shuffle=True)
 
-        encoder = CIFAR10_AE_Encoder().to(device)
+        encoder = FashionMNIST_AE_Encoder().to(device)
         # encoder.load_weights(f'./snapshots/AE_V7_CIFAR10_{NOMINAL_CLASS}')
         # encoder.load_state_dict(torch.load(f'./snapshots/AE_V3_MNIST_{NOMINAL_CLASS}'))
         encoder.train()
