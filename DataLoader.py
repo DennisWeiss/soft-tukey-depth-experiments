@@ -589,7 +589,7 @@ class NominalFashionMNISTImageDataset(Dataset):
 
 class AnomalousFashionMNISTImageDataset(Dataset):
     def __init__(self, nominal_class, train=True):
-        self.data = torchvision.datasets.MNIST(
+        self.data = torchvision.datasets.FashionMNIST(
             'datasets',
             train=train,
             download=True,

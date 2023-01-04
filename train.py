@@ -35,7 +35,7 @@ from models.Wasserstein_Network import Wasserstein_Network
 DATASET_NAME = 'FashionMNIST_Autoencoder'
 NOMINAL_DATASET = NominalFashionMNISTAutoencoderCachedDataset
 ANOMALOUS_DATASET = AnomalousFashionMNISTAutoencoderCachedDataset
-RESULT_NAME_DESC = 'kldiv_8x_temp0.5_dim64'
+RESULT_NAME_DESC = 'varmax_temp1_dim64'
 DATA_SIZE = 4000
 TEST_NOMINAL_SIZE = 800
 TEST_ANOMALOUS_SIZE = 800
@@ -43,12 +43,12 @@ TEST_ANOMALOUS_SIZE = 800
 
 USE_CUDA_IF_AVAILABLE = True
 BATCH_SIZE = 800
-ENCODER_LEARNING_RATE = 3e-3
+ENCODER_LEARNING_RATE = 1e-3
 HALFSPACE_OPTIMIZER_LEARNING_RATE = 1e+3
 WASSERSTEIN_NETWORK_LEARNING_RATE = 1e-2
 WEIGHT_DECAY = 0
 KERNEL_BANDWIDTH = 0.05
-SOFT_TUKEY_DEPTH_TEMP = 0.5
+SOFT_TUKEY_DEPTH_TEMP = 1
 ENCODING_DIM = 64
 TARGET_DISTRIBUTION = lambda x: 8*x
 HISTOGRAM_BINS = 50
@@ -169,7 +169,7 @@ def draw_scatter_plot(X, z_params):
 
 
 for run in range(RUNS):
-    for NOMINAL_CLASS in range(0, 1):
+    for NOMINAL_CLASS in range(8, 9):
         train_data = torch.utils.data.Subset(NOMINAL_DATASET(train=True, nominal_class=NOMINAL_CLASS), list(range(DATA_SIZE)))
         train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE)
         train_dataloader_full_data = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
@@ -261,13 +261,13 @@ for run in range(RUNS):
                     # mean_td_loss = -mean_td - 1e-2 * torch.norm(Y - Y.mean(dim=0))
                     # mean_td_loss.backward()
                     # print(f'Mean TD loss: {mean_td_loss}')
-                    # (-var).backward()
+                    (-var).backward()
                     # (-mean_td).backward()
-                    kl_div = get_kl_divergence(tds, TARGET_DISTRIBUTION, 0.05, 1e-3)
+                    # kl_div = get_kl_divergence(tds, TARGET_DISTRIBUTION, 0.05, 1e-3)
                     # wasserstein_loss = get_wasserstein_loss(wasserstein_network, tds)
-                    print(f'KL divergence: {kl_div.item()}')
+                    # print(f'KL divergence: {kl_div.item()}')
                     # print(f'Wasserstein loss: {wasserstein_loss.item()}')
-                    kl_div.backward()
+                    # kl_div.backward()
                     # wasserstein_loss.backward()
                     optimizer_encoder.step()
 

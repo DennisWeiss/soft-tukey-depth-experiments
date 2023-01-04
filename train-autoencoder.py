@@ -66,7 +66,7 @@ def get_loss_kl_div_latent(Z_mu, Z_std, Z):
     return torch.sum(q.log_prob(Z) - p.log_prob(Z), dim=1).mean()
 
 
-for CLASS in range(1, 2):
+for CLASS in range(4, 10):
     train_data = NominalFashionMNISTImageDataset(train=True, nominal_class=CLASS)
 
     train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE, pin_memory=True)

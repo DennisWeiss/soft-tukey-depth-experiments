@@ -42,7 +42,7 @@ min_max_mnist = [(-0.8826567065619495, 9.001545489292527),
 
 min_max_mnist_all = (-0.8826567065619495, 20.108062262467364)
 
-for nominal_class in range(1, 2):
+for nominal_class in range(3, 10):
     data = torchvision.datasets.FashionMNIST(
         'datasets',
         train=TRAIN,
