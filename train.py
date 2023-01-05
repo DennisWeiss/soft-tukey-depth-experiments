@@ -35,7 +35,7 @@ from models.Wasserstein_Network import Wasserstein_Network
 DATASET_NAME = 'FashionMNIST_Autoencoder'
 NOMINAL_DATASET = NominalFashionMNISTAutoencoderCachedDataset
 ANOMALOUS_DATASET = AnomalousFashionMNISTAutoencoderCachedDataset
-RESULT_NAME_DESC = 'varmax_temp1_dim64'
+RESULT_NAME_DESC = 'varmax_temp0.2_dim64'
 DATA_SIZE = 4000
 TEST_NOMINAL_SIZE = 800
 TEST_ANOMALOUS_SIZE = 800
@@ -48,13 +48,13 @@ HALFSPACE_OPTIMIZER_LEARNING_RATE = 1e+3
 WASSERSTEIN_NETWORK_LEARNING_RATE = 1e-2
 WEIGHT_DECAY = 0
 KERNEL_BANDWIDTH = 0.05
-SOFT_TUKEY_DEPTH_TEMP = 1
+SOFT_TUKEY_DEPTH_TEMP = 0.2
 ENCODING_DIM = 64
 TARGET_DISTRIBUTION = lambda x: 8*x
 HISTOGRAM_BINS = 50
 NUM_EPOCHS = 10
 STD_ITERATIONS = 20
-STD_COMPUTATIONS = 20
+STD_COMPUTATIONS = 10
 WASSERSTEIN_ITERATIONS = 10
 RUNS = 1
 
@@ -169,7 +169,7 @@ def draw_scatter_plot(X, z_params):
 
 
 for run in range(RUNS):
-    for NOMINAL_CLASS in range(8, 9):
+    for NOMINAL_CLASS in range(7, 8):
         train_data = torch.utils.data.Subset(NOMINAL_DATASET(train=True, nominal_class=NOMINAL_CLASS), list(range(DATA_SIZE)))
         train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE)
         train_dataloader_full_data = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
