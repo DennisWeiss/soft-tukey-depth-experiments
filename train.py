@@ -26,6 +26,7 @@ from models.CIFAR10_Encoder_V3 import CIFAR10_Encoder_V3
 import torch.utils.data
 import numpy as np
 import scipy as sp
+from sklearn.manifold import TSNE
 import utils
 
 from models.MVTecCapsule_Encoder import MVTecCapsule_Encoder
@@ -52,7 +53,7 @@ SOFT_TUKEY_DEPTH_TEMP = 0.2
 ENCODING_DIM = 64
 TARGET_DISTRIBUTION = lambda x: 8*x
 HISTOGRAM_BINS = 50
-NUM_EPOCHS = 10
+NUM_EPOCHS = 20
 STD_ITERATIONS = 20
 STD_COMPUTATIONS = 10
 WASSERSTEIN_ITERATIONS = 10
@@ -168,8 +169,21 @@ def draw_scatter_plot(X, z_params):
     X_scatter_plot.show()
 
 
+def draw_tsne_visualization(X, n_train, n_test_nominal, n_test_anomalous, points_shown, dim=2):
+    X_tsne_embedded = TSNE(n_components=dim, perplexity=100, n_iter=2000).fit_transform(X)
+    shown_train_points = min(n_train, points_shown)
+    shown_test_nominal_points = min(n_test_nominal, points_shown)
+    shown_test_anomalous_points = min(n_test_anomalous, points_shown)
+    plt.scatter(
+        np.concatenate((X_tsne_embedded[0:shown_train_points, 0], X_tsne_embedded[n_train:n_train + shown_test_nominal_points, 0], X_tsne_embedded[n_train + n_test_nominal:n_train + n_test_nominal + shown_test_anomalous_points, 0])),
+        np.concatenate((X_tsne_embedded[0:shown_train_points, 1], X_tsne_embedded[n_train:n_train + shown_test_nominal_points, 1], X_tsne_embedded[n_train + n_test_nominal:n_train + n_test_nominal + shown_test_anomalous_points, 1])),
+        c=['blue' for i in range(shown_train_points)] + ['green' for i in range(shown_test_nominal_points)] + ['red' for i in range(shown_test_anomalous_points)]
+    )
+    plt.show()
+
+
 for run in range(RUNS):
-    for NOMINAL_CLASS in range(7, 8):
+    for NOMINAL_CLASS in range(1, 2):
         train_data = torch.utils.data.Subset(NOMINAL_DATASET(train=True, nominal_class=NOMINAL_CLASS), list(range(DATA_SIZE)))
         train_dataloader = torch.utils.data.DataLoader(train_data, batch_size=BATCH_SIZE)
         train_dataloader_full_data = torch.utils.data.DataLoader(train_data, batch_size=DATA_SIZE)
@@ -261,13 +275,13 @@ for run in range(RUNS):
                     # mean_td_loss = -mean_td - 1e-2 * torch.norm(Y - Y.mean(dim=0))
                     # mean_td_loss.backward()
                     # print(f'Mean TD loss: {mean_td_loss}')
-                    (-var).backward()
+                    # (-var).backward()
                     # (-mean_td).backward()
-                    # kl_div = get_kl_divergence(tds, TARGET_DISTRIBUTION, 0.05, 1e-3)
+                    kl_div = get_kl_divergence(tds, TARGET_DISTRIBUTION, 0.05, 1e-3)
                     # wasserstein_loss = get_wasserstein_loss(wasserstein_network, tds)
-                    # print(f'KL divergence: {kl_div.item()}')
+                    print(f'KL divergence: {kl_div.item()}')
                     # print(f'Wasserstein loss: {wasserstein_loss.item()}')
-                    # kl_div.backward()
+                    kl_div.backward()
                     # wasserstein_loss.backward()
                     optimizer_encoder.step()
 
@@ -282,6 +296,8 @@ for run in range(RUNS):
                 X = X.to(device)
                 Y = encoder(X)
 
+                all_data = Y.detach().cpu().numpy()
+
                 # soft_tukey_depths = []
                 # for j in range(Y.size(dim=0)):
                 #     soft_tukey_depths.append(soft_tukey_depth(Y[j], Y, z_params[j]).item() / Y.size(dim=0))
@@ -295,6 +311,9 @@ for run in range(RUNS):
                 for step2, X_test_nominal in enumerate(test_dataloader_nominal):
                     X_test_nominal = X_test_nominal.to(device)
                     Y_test_nominal = encoder(X_test_nominal)
+
+                    all_data = np.concatenate((all_data, Y_test_nominal.detach().cpu().numpy()))
+
                     z_test_nominal = torch.nn.Parameter(torch.rand(X_test_nominal.size(dim=0), ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)))
                     optimizer_z_test_nominal = torch.optim.SGD([z_test_nominal], lr=3e+1)
 
@@ -320,6 +339,9 @@ for run in range(RUNS):
                 for step2, X_test_anomalous in enumerate(test_dataloader_anomalous):
                     X_test_anomalous = X_test_anomalous.to(device)
                     Y_test_anomalous = encoder(X_test_anomalous)
+
+                    all_data = np.concatenate((all_data, Y_test_anomalous.detach().cpu().numpy()))
+
                     z_test_anomalous = torch.nn.Parameter(torch.rand(X_test_anomalous.size(dim=0), ENCODING_DIM, device=device).multiply(torch.tensor(2)).subtract(torch.tensor(1)))
                     optimizer_z_test_anomalous = torch.optim.SGD([z_test_anomalous], lr=3e+1)
 
@@ -334,6 +356,9 @@ for run in range(RUNS):
                     # if ENCODING_DIM == 2:
                     #     draw_scatter_plot(Y_test_anomalous, z_test_anomalous)
                     # draw_histogram(Y_test_anomalous, Y, z_test_anomalous, SOFT_TUKEY_DEPTH_TEMP, bins=HISTOGRAM_BINS)
+
+                if i % 2 == 0:
+                    draw_tsne_visualization(all_data, len(train_data), len(test_data_nominal), len(test_data_anomalous), 300, 2)
 
                 writer = csv.writer(open(
                     f'./results/raw/soft_tukey_depths_{DATASET_NAME}_Anomalous_Encoder_{RESULT_NAME_DESC}_{NOMINAL_CLASS}_run{run}.csv',

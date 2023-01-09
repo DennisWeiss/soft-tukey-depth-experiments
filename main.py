@@ -15,14 +15,14 @@ from models.RAE_CIFAR10 import RAE_CIFAR10
 
 
 USE_CUDA_IF_AVAILABLE = True
-DATASET_NAME = 'FashionMNIST'
+DATASET_NAME = 'FashionMNIST_Autoencoder'
 NOMINAL_DATASET = NominalFashionMNISTAutoencoderCachedDataset
 ANOMALOUS_DATASET = AnomalousFashionMNISTAutoencoderCachedDataset
 N_CLASSES = 10
 TUKEY_DEPTH_COMPUTATION_EPOCHS = 30
 TUKEY_DEPTH_COMPUTATIONS = 30
 SOFT_TUKEY_DEPTH_TEMP = 2
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 TRAIN_SIZE = 6000
 TEST_NOMINAL_SIZE = 1000
 TEST_ANOMALOUS_SIZE = 1000
@@ -46,7 +46,7 @@ def soft_tukey_depth(X_, X, Z, temp):
     return torch.sigmoid(dot_products_normalized).sum(dim=0).divide(X.size(dim=0))
 
 
-for i in range(0, 1):
+for i in range(0, 10):
     train_data = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=True), list(range(TRAIN_SIZE)))
     test_data_nominal = torch.utils.data.Subset(NOMINAL_DATASET(nominal_class=i, train=False), list(range(TEST_NOMINAL_SIZE)))
     test_data_anomalous = torch.utils.data.Subset(ANOMALOUS_DATASET(nominal_class=i, train=False), list(range(TEST_ANOMALOUS_SIZE)))
